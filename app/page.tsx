@@ -1,65 +1,152 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Sparkles,
+  BookOpen,
+  Users,
+  FileText,
+  Palette,
+  Zap,
+  Shield,
+  ArrowRight,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
-export default function Home() {
+const features = [
+  {
+    icon: BookOpen,
+    title: "3막 구조 & 아웃라인",
+    description: "전체 스토리 구조와 에피소드별 아웃라인을 자동 설계",
+  },
+  {
+    icon: Users,
+    title: "캐릭터 시트 8명",
+    description: "외모, 성격, 비밀, 관계도까지 상세한 캐릭터 설정",
+  },
+  {
+    icon: FileText,
+    title: "1화 완성본",
+    description: "4,000~5,000자의 프로급 한국어 웹소설 문체",
+  },
+  {
+    icon: Palette,
+    title: "표지 프롬프트 & SEO",
+    description: "Midjourney/Flux 프롬프트 + 검색 최적화 제목",
+  },
+];
+
+export default async function LandingPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen">
+      {/* Nav */}
+      <nav className="border-b">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-primary" />
+            <span className="text-lg font-bold">AI 로판 팩토리</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {user ? (
+              <Button asChild>
+                <Link href="/dashboard">
+                  대시보드
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">로그인</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/signup">무료로 시작</Link>
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </nav>
+
+      {/* Hero */}
+      <section className="mx-auto max-w-6xl px-4 py-20 text-center">
+        <Badge variant="secondary" className="mb-4">
+          <Sparkles className="mr-1 h-3 w-3" />
+          AI 기반 웹소설 기획 도구
+        </Badge>
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+          장르와 키워드만 입력하면
+          <br />
+          <span className="text-primary">완성된 웹소설 기획</span>이 나옵니다
+        </h1>
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+          3막 구조, 캐릭터 시트, 1화 완성본, 표지 프롬프트까지.
+          AI가 카카오페이지·네이버 시리즈 수준의 웹소설 기획을 자동으로 생성합니다.
+        </p>
+        <div className="mt-8 flex justify-center gap-4">
+          <Button size="lg" asChild>
+            <Link href={user ? "/generate" : "/signup"}>
+              <Sparkles className="mr-2 h-5 w-5" />
+              무료로 시작하기
+            </Link>
+          </Button>
         </div>
-      </main>
+        <p className="mt-3 text-sm text-muted-foreground">
+          회원가입 후 매월 3회 무료 생성
+        </p>
+      </section>
+
+      {/* Features */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <h2 className="text-center text-2xl font-bold mb-10">
+          한 번의 생성으로 받는 결과물
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {features.map((f) => (
+            <Card key={f.title}>
+              <CardContent className="pt-6">
+                <f.icon className="h-10 w-10 text-primary mb-4" />
+                <h3 className="font-semibold mb-2">{f.title}</h3>
+                <p className="text-sm text-muted-foreground">{f.description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Trust */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <div className="grid gap-8 sm:grid-cols-3">
+          <div className="text-center">
+            <Zap className="mx-auto h-8 w-8 text-primary mb-2" />
+            <h3 className="font-semibold">실시간 스트리밍</h3>
+            <p className="text-sm text-muted-foreground mt-1">생성 과정을 실시간으로 확인</p>
+          </div>
+          <div className="text-center">
+            <Shield className="mx-auto h-8 w-8 text-primary mb-2" />
+            <h3 className="font-semibold">100% 저작권 귀속</h3>
+            <p className="text-sm text-muted-foreground mt-1">생성된 콘텐츠는 모두 작가님 것</p>
+          </div>
+          <div className="text-center">
+            <BookOpen className="mx-auto h-8 w-8 text-primary mb-2" />
+            <h3 className="font-semibold">플랫폼 투고 최적화</h3>
+            <p className="text-sm text-muted-foreground mt-1">카카오페이지/시리즈 트렌드 반영</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t py-8">
+        <div className="mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground">
+          <p>AI 로판 팩토리 &copy; 2026. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }
