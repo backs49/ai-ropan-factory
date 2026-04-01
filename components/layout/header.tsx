@@ -32,10 +32,8 @@ export function Header({ profile }: { profile: Profile }) {
   return (
     <header className="flex h-16 items-center justify-between border-b px-4 md:px-6">
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetTrigger asChild className="md:hidden">
-          <Button variant="ghost" size="icon">
-            <Menu className="h-5 w-5" />
-          </Button>
+        <SheetTrigger render={<Button variant="ghost" size="icon" />} className="md:hidden">
+          <Menu className="h-5 w-5" />
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex h-16 items-center gap-2 border-b px-6">
@@ -79,14 +77,12 @@ export function Header({ profile }: { profile: Profile }) {
         </span>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
+          <DropdownMenuTrigger render={<Button variant="ghost" className="relative h-9 w-9 rounded-full" />}>
+            <Avatar className="h-9 w-9">
+              <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <div className="px-2 py-1.5">
@@ -94,9 +90,7 @@ export function Header({ profile }: { profile: Profile }) {
               <p className="text-xs text-muted-foreground">{profile.email}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/settings">설정</Link>
-            </DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/settings" />}>설정</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => logout()} className="text-destructive">
               <LogOut className="mr-2 h-4 w-4" />

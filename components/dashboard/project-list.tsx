@@ -15,11 +15,9 @@ export function ProjectList({ projects }: { projects: Project[] }) {
         <p className="text-muted-foreground mb-6 max-w-sm">
           장르, 키워드, 분위기만 입력하면 AI가 웹소설 기획을 자동으로 생성합니다.
         </p>
-        <Button asChild>
-          <Link href="/generate">
-            <Sparkles className="mr-2 h-4 w-4" />
-            첫 작품 생성하기
-          </Link>
+        <Button render={<Link href="/generate" />}>
+          <Sparkles className="mr-2 h-4 w-4" />
+          첫 작품 생성하기
         </Button>
       </div>
     );

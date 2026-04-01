@@ -54,20 +54,14 @@ export default async function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             {user ? (
-              <Button asChild>
-                <Link href="/dashboard">
-                  대시보드
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+              <Button render={<Link href="/dashboard" />}>
+                대시보드
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
               <>
-                <Button variant="ghost" asChild>
-                  <Link href="/login">로그인</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/signup">무료로 시작</Link>
-                </Button>
+                <Button variant="ghost" render={<Link href="/login" />}>로그인</Button>
+                <Button render={<Link href="/signup" />}>무료로 시작</Button>
               </>
             )}
           </div>
@@ -90,11 +84,9 @@ export default async function LandingPage() {
           AI가 카카오페이지·네이버 시리즈 수준의 웹소설 기획을 자동으로 생성합니다.
         </p>
         <div className="mt-8 flex justify-center gap-4">
-          <Button size="lg" asChild>
-            <Link href={user ? "/generate" : "/signup"}>
-              <Sparkles className="mr-2 h-5 w-5" />
-              무료로 시작하기
-            </Link>
+          <Button size="lg" render={<Link href={user ? "/generate" : "/signup"} />}>
+            <Sparkles className="mr-2 h-5 w-5" />
+            무료로 시작하기
           </Button>
         </div>
         <p className="mt-3 text-sm text-muted-foreground">

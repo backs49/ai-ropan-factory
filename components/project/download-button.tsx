@@ -100,11 +100,9 @@ export function DownloadButton({ project }: { project: Project }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          다운로드
-        </Button>
+      <DropdownMenuTrigger render={<Button variant="outline" />}>
+        <Download className="mr-2 h-4 w-4" />
+        다운로드
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuItem onClick={handleDownloadMD}>Markdown (.md)</DropdownMenuItem>

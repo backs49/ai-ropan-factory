@@ -29,8 +29,8 @@ export default async function ProjectPage({
     return (
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+          <Button variant="ghost" size="icon" render={<Link href="/dashboard" />}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold">생성 중...</h1>
         </div>
@@ -48,8 +48,8 @@ export default async function ProjectPage({
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+          <Button variant="ghost" size="icon" render={<Link href="/dashboard" />}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <h1 className="text-2xl font-bold">
@@ -62,11 +62,9 @@ export default async function ProjectPage({
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href={`/generate?variation_of=${project.id}`}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              다시 생성
-            </Link>
+          <Button variant="outline" render={<Link href={`/generate?variation_of=${project.id}`} />}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            다시 생성
           </Button>
           <DownloadButton project={project} />
         </div>
