@@ -19,6 +19,40 @@ import { AI_MODELS } from "@/types";
 
 type SendEvent = (event: StreamEvent) => void;
 
+/**
+ * AI 응답에서 JSON을 안전하게 추출.
+ * Gemini 등이 JSON 앞뒤에 설명 텍스트를 붙이는 경우 처리.
+ */
+function extractJSON(text: string): string {
+  // 1) 코드블록 안의 JSON 추출
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    return codeBlockMatch[1].trim();
+  }
+
+  // 2) 첫 번째 { 또는 [ 부터 마지막 } 또는 ] 까지 추출
+  const firstBrace = text.indexOf("{");
+  const firstBracket = text.indexOf("[");
+
+  let start = -1;
+  let endChar = "";
+
+  if (firstBrace === -1 && firstBracket === -1) return text;
+
+  if (firstBracket === -1 || (firstBrace !== -1 && firstBrace < firstBracket)) {
+    start = firstBrace;
+    endChar = "}";
+  } else {
+    start = firstBracket;
+    endChar = "]";
+  }
+
+  const lastEnd = text.lastIndexOf(endChar);
+  if (lastEnd <= start) return text;
+
+  return text.substring(start, lastEnd + 1);
+}
+
 function getModelForStage(
   provider: AIProvider,
   tier: Tier,
@@ -83,9 +117,7 @@ export async function runGenerationPipeline(
   tokenUsage.output_tokens += outlineUsage.outputTokens;
 
   try {
-    outline = JSON.parse(
-      outlineText.replace(/```json\n?/g, "").replace(/```\n?/g, "")
-    );
+    outline = JSON.parse(extractJSON(outlineText));
   } catch {
     sendEvent({ stage: "outline", status: "error", error: "아웃라인 파싱 실패" });
     return { outline, characters, firstEpisode, seo, tokenUsage };
@@ -114,14 +146,12 @@ export async function runGenerationPipeline(
   tokenUsage.output_tokens += charUsage.outputTokens;
 
   try {
-    characters = JSON.parse(
-      charText.replace(/```json\n?/g, "").replace(/```\n?/g, "")
-    );
+    characters = JSON.parse(extractJSON(charText));
+    sendEvent({ stage: "characters", status: "completed" });
   } catch {
-    sendEvent({ stage: "characters", status: "error", error: "캐릭터 파싱 실패" });
-    return { outline, characters, firstEpisode, seo, tokenUsage };
+    sendEvent({ stage: "characters", status: "error", error: "캐릭터 파싱 실패 (계속 진행)" });
+    // 파싱 실패해도 1화/메타는 계속 진행
   }
-  sendEvent({ stage: "characters", status: "completed" });
 
   // --- Stage 3: First Episode ---
   sendEvent({ stage: "first_episode", status: "started" });
@@ -168,14 +198,11 @@ export async function runGenerationPipeline(
   tokenUsage.output_tokens += metaUsage.outputTokens;
 
   try {
-    seo = JSON.parse(
-      metaText.replace(/```json\n?/g, "").replace(/```\n?/g, "")
-    );
+    seo = JSON.parse(extractJSON(metaText));
+    sendEvent({ stage: "meta", status: "completed" });
   } catch {
     sendEvent({ stage: "meta", status: "error", error: "메타 데이터 파싱 실패" });
-    return { outline, characters, firstEpisode, seo, tokenUsage };
   }
-  sendEvent({ stage: "meta", status: "completed" });
 
   // Estimate cost based on provider (blended rate for mixed models)
   tokenUsage.cost_estimate = estimateCost(provider, tier, tokenUsage);

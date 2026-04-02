@@ -72,6 +72,7 @@ async function streamGemini(
     config: {
       systemInstruction: params.system,
       maxOutputTokens: params.maxTokens,
+      responseModalities: ["TEXT"],
     },
   });
 
