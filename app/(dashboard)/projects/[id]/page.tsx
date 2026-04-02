@@ -7,6 +7,7 @@ import { CharacterSheet } from "@/components/project/character-sheet";
 import { EpisodeView } from "@/components/project/episode-view";
 import { DownloadButton } from "@/components/project/download-button";
 import { RetryButton } from "@/components/project/retry-button";
+import { CopyPrompt } from "@/components/project/copy-prompt";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -123,15 +124,8 @@ export default async function ProjectPage({
               {coverPrompts.map((cp, i) => (
                 <Card key={i}>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{cp.style}</CardTitle></CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Prompt</p>
-                      <p className="rounded bg-muted p-2 text-xs font-mono">{cp.prompt}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Negative Prompt</p>
-                      <p className="rounded bg-muted p-2 text-xs font-mono">{cp.negative_prompt}</p>
-                    </div>
+                  <CardContent className="text-sm">
+                    <CopyPrompt prompt={cp.prompt} negativePrompt={cp.negative_prompt} />
                   </CardContent>
                 </Card>
               ))}
