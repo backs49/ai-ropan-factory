@@ -52,10 +52,6 @@ export async function createProject(input: GenerationInput): Promise<{
 
   if (error) return { error: error.message };
 
-  await supabase
-    .from("profiles")
-    .update({ monthly_generations: currentCount + 1 })
-    .eq("id", user.id);
-
+  // 횟수 차감은 생성 성공 시에만 (API route에서 처리)
   return { projectId: project.id };
 }

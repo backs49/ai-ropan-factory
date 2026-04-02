@@ -41,12 +41,13 @@ export async function GET(request: Request) {
   // Get user's AI provider preference
   const { data: profile } = await supabase
     .from("profiles")
-    .select("ai_provider, tier")
+    .select("ai_provider, tier, monthly_generations")
     .eq("id", user.id)
     .single();
 
   const aiProvider = (profile?.ai_provider as AIProvider) || "gemini";
   const userTier = (profile?.tier as Tier) || "free";
+  const currentGenerations = profile?.monthly_generations ?? 0;
 
   const serviceClient = await createServiceClient();
 
@@ -70,11 +71,14 @@ export async function GET(request: Request) {
 
         const result = await runGenerationPipeline(input, sendEvent, aiProvider, userTier);
 
+        // 아웃라인이 있으면 최소한의 성공으로 간주
+        const isSuccess = result.outline !== null;
+
         await serviceClient
           .from("projects")
           .update({
             title: result.outline?.title || null,
-            status: "completed",
+            status: isSuccess ? "completed" : "failed",
             outline: result.outline,
             characters: result.characters,
             first_episode: result.firstEpisode,
@@ -91,6 +95,14 @@ export async function GET(request: Request) {
             token_usage: result.tokenUsage,
           })
           .eq("id", projectId);
+
+        // 성공 시에만 생성 횟수 차감
+        if (isSuccess) {
+          await serviceClient
+            .from("profiles")
+            .update({ monthly_generations: currentGenerations + 1 })
+            .eq("id", user.id);
+        }
 
         sendEvent({
           stage: "meta",
