@@ -114,7 +114,7 @@ export function GenerationForm({ variationOf }: { variationOf?: string }) {
               <Input
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(); } }}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addKeyword(); } }}
                 placeholder="예: 계약 결혼, 냉혈 공작, 전생 기억"
                 disabled={keywords.length >= 5}
               />
