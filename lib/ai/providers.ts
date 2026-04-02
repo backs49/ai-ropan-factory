@@ -5,6 +5,7 @@ export interface AIStreamParams {
   user: string;
   maxTokens: number;
   model: string;
+  expectsJSON?: boolean;
 }
 
 export interface AIStreamResult {
@@ -72,7 +73,10 @@ async function streamGemini(
     config: {
       systemInstruction: params.system,
       maxOutputTokens: params.maxTokens,
-      responseModalities: ["TEXT"],
+      ...(params.expectsJSON
+        ? { responseMimeType: "application/json" }
+        : { responseModalities: ["TEXT"] }),
+      thinkingConfig: { includeThoughts: false },
     },
   });
 
@@ -111,6 +115,7 @@ async function streamGrok(
     max_tokens: params.maxTokens,
     stream: true,
     stream_options: { include_usage: true },
+    ...(params.expectsJSON ? { response_format: { type: "json_object" as const } } : {}),
     messages: [
       { role: "system", content: params.system },
       { role: "user", content: params.user },

@@ -114,6 +114,7 @@ export async function GET(request: Request) {
               user: charPrompt.user,
               maxTokens: 6000,
               model: getModel(provider, tier, false),
+              expectsJSON: true,
             },
             (text) => {
               charText += text;
@@ -170,6 +171,7 @@ export async function GET(request: Request) {
               user: metaPrompt.user,
               maxTokens: 3000,
               model: getModel(provider, tier, false),
+              expectsJSON: true,
             },
             (text) => {
               metaText += text;

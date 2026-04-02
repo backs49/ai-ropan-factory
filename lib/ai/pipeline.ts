@@ -107,6 +107,7 @@ export async function runGenerationPipeline(
       user: outlinePrompt.user,
       maxTokens: 8000,
       model: getModelForStage(provider, tier, "outline"),
+      expectsJSON: true,
     },
     (text) => {
       outlineText += text;
@@ -136,6 +137,7 @@ export async function runGenerationPipeline(
       user: charPrompt.user,
       maxTokens: 6000,
       model: getModelForStage(provider, tier, "characters"),
+      expectsJSON: true,
     },
     (text) => {
       charText += text;
@@ -188,6 +190,7 @@ export async function runGenerationPipeline(
       user: metaPrompt.user,
       maxTokens: 3000,
       model: getModelForStage(provider, tier, "meta"),
+      expectsJSON: true,
     },
     (text) => {
       metaText += text;
