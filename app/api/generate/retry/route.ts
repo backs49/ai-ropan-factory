@@ -62,9 +62,9 @@ export async function GET(request: Request) {
   const outline = project.outline as OutlineData | null;
   if (!outline) return new Response("아웃라인이 없어 재시도할 수 없습니다.", { status: 400 });
 
-  // 빠진 단계 확인
+  // 빠진 또는 잘못된 단계 확인
   const missingStages: string[] = [];
-  if (!project.characters) missingStages.push("characters");
+  if (!Array.isArray(project.characters)) missingStages.push("characters");
   if (!project.first_episode) missingStages.push("first_episode");
   if (!project.seo && !project.cover_prompts) missingStages.push("meta");
 
