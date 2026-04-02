@@ -90,7 +90,7 @@ export default async function LandingPage() {
           </Button>
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
-          회원가입 후 매월 3회 무료 생성
+          회원가입 후 평생 3회 무료 생성
         </p>
       </section>
 

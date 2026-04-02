@@ -59,7 +59,7 @@ export default async function SettingsPage() {
                 {p.tier === "free" ? "Free" : "Pro"}
               </Badge>
               <span className="text-sm text-muted-foreground">
-                {p.tier === "free" ? "월 3회 생성" : "무제한 생성"}
+                {p.tier === "free" ? "평생 3회 생성" : "무제한 생성"}
               </span>
             </div>
           </div>
@@ -68,7 +68,7 @@ export default async function SettingsPage() {
 
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">이번 달 사용량</span>
+              <span className="text-muted-foreground">총 사용량</span>
               <span>{p.monthly_generations}회 사용 / {remaining}</span>
             </div>
             {p.tier === "free" && (

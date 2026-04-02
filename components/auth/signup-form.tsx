@@ -26,7 +26,7 @@ export function SignupForm() {
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">회원가입</CardTitle>
-        <CardDescription>무료로 시작하세요. 매월 3회 생성 가능합니다.</CardDescription>
+        <CardDescription>무료로 시작하세요. 평생 3회 무료 생성 가능합니다.</CardDescription>
       </CardHeader>
       <form action={handleSubmit}>
         <CardContent className="space-y-4">

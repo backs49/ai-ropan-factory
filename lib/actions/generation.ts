@@ -26,26 +26,12 @@ export async function createProject(input: GenerationInput): Promise<{
 
   const p = profile as Pick<Profile, "tier" | "monthly_generations" | "monthly_reset_at">;
 
-  const now = new Date();
-  const resetAt = new Date(p.monthly_reset_at);
-  let currentCount = p.monthly_generations;
-
-  if (now >= resetAt) {
-    const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    await supabase
-      .from("profiles")
-      .update({
-        monthly_generations: 0,
-        monthly_reset_at: nextReset.toISOString(),
-      })
-      .eq("id", user.id);
-    currentCount = 0;
-  }
-
+  const currentCount = p.monthly_generations;
   const limit = TIER_LIMITS[p.tier as Tier];
+
   if (currentCount >= limit) {
     return {
-      error: `이번 달 생성 한도(${limit}회)에 도달했습니다. Pro로 업그레이드하면 무제한으로 생성할 수 있습니다.`,
+      error: `무료 체험 ${limit}회를 모두 사용했습니다. Pro로 업그레이드하면 무제한으로 생성할 수 있습니다.`,
     };
   }
 
