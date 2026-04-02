@@ -6,6 +6,7 @@ import { OutlineView } from "@/components/project/outline-view";
 import { CharacterSheet } from "@/components/project/character-sheet";
 import { EpisodeView } from "@/components/project/episode-view";
 import { DownloadButton } from "@/components/project/download-button";
+import { RetryButton } from "@/components/project/retry-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,6 +45,8 @@ export default async function ProjectPage({
   const coverPrompts = project.cover_prompts as CoverPrompt[] | null;
   const seo = project.seo as SeoData | null;
 
+  const hasMissingStages = outline && (!characters || !project.first_episode || (!seo && !coverPrompts));
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -62,6 +65,7 @@ export default async function ProjectPage({
           </div>
         </div>
         <div className="flex gap-2">
+          {hasMissingStages && <RetryButton projectId={project.id} />}
           <Button variant="outline" render={<Link href={`/generate?variation_of=${project.id}`} />}>
             <RefreshCw className="mr-2 h-4 w-4" />
             다시 생성
