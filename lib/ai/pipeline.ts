@@ -148,11 +148,16 @@ export async function runGenerationPipeline(
   tokenUsage.output_tokens += charUsage.outputTokens;
 
   try {
-    characters = JSON.parse(extractJSON(charText));
-    sendEvent({ stage: "characters", status: "completed" });
+    const parsed = JSON.parse(extractJSON(charText));
+    // Grok 등이 {"characters": [...]} 형태로 감쌀 수 있음
+    characters = Array.isArray(parsed) ? parsed : Array.isArray(parsed.characters) ? parsed.characters : null;
+    if (characters) {
+      sendEvent({ stage: "characters", status: "completed" });
+    } else {
+      sendEvent({ stage: "characters", status: "error", error: "캐릭터 배열 추출 실패 (계속 진행)" });
+    }
   } catch {
     sendEvent({ stage: "characters", status: "error", error: "캐릭터 파싱 실패 (계속 진행)" });
-    // 파싱 실패해도 1화/메타는 계속 진행
   }
 
   // --- Stage 3: First Episode ---

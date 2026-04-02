@@ -123,8 +123,14 @@ export async function GET(request: Request) {
           );
 
           try {
-            updates.characters = JSON.parse(extractJSON(charText));
-            sendEvent({ stage: "characters", status: "completed" });
+            const parsed = JSON.parse(extractJSON(charText));
+            const chars = Array.isArray(parsed) ? parsed : Array.isArray(parsed.characters) ? parsed.characters : null;
+            if (chars) {
+              updates.characters = chars;
+              sendEvent({ stage: "characters", status: "completed" });
+            } else {
+              sendEvent({ stage: "characters", status: "error", error: "캐릭터 배열 추출 실패" });
+            }
           } catch {
             sendEvent({ stage: "characters", status: "error", error: "캐릭터 파싱 실패" });
           }
