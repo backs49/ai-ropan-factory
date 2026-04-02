@@ -28,6 +28,12 @@ export default async function SettingsPage() {
   const limit = TIER_LIMITS[p.tier];
   const remaining = limit === Infinity ? "무제한" : `${limit - p.monthly_generations}회 남음`;
 
+  // API 키가 설정된 프로바이더만 활성화
+  const enabledProviders: AIProvider[] = [];
+  if (process.env.GEMINI_API_KEY) enabledProviders.push("gemini");
+  if (process.env.XAI_API_KEY) enabledProviders.push("grok");
+  if (process.env.ANTHROPIC_API_KEY) enabledProviders.push("anthropic");
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold">설정</h1>
@@ -54,7 +60,7 @@ export default async function SettingsPage() {
           <CardDescription>생성에 사용할 AI 모델을 선택하세요</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProviderSelector current={(p.ai_provider || "gemini") as AIProvider} tier={p.tier} />
+          <ProviderSelector current={(p.ai_provider || "gemini") as AIProvider} tier={p.tier} enabledProviders={enabledProviders} />
         </CardContent>
       </Card>
 
