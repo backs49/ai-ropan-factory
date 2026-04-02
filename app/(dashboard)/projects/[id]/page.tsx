@@ -41,9 +41,12 @@ export default async function ProjectPage({
   }
 
   const outline = project.outline as OutlineData | null;
-  const characters = project.characters as CharacterData[] | null;
-  const coverPrompts = project.cover_prompts as CoverPrompt[] | null;
-  const seo = project.seo as SeoData | null;
+  const rawChars = project.characters;
+  const characters = Array.isArray(rawChars) ? rawChars as CharacterData[] : null;
+  const rawCover = project.cover_prompts;
+  const coverPrompts = Array.isArray(rawCover) ? rawCover as CoverPrompt[] : null;
+  const rawSeo = project.seo as SeoData | null;
+  const seo = rawSeo && Array.isArray(rawSeo.titles) ? rawSeo : null;
 
   const hasMissingStages = outline && (!characters || !project.first_episode || (!seo && !coverPrompts));
 
