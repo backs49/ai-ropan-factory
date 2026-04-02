@@ -1,9 +1,20 @@
 export type AIProvider = "anthropic" | "gemini" | "grok";
 
-export const AI_PROVIDER_OPTIONS: { value: AIProvider; label: string; model: string }[] = [
-  { value: "gemini", label: "Gemini (Google)", model: "gemini-2.5-flash" },
-  { value: "grok", label: "Grok (xAI)", model: "grok-3-mini" },
-  { value: "anthropic", label: "Claude (Anthropic)", model: "claude-sonnet-4-20250514" },
+export interface AIModelConfig {
+  light: string;  // Free 티어: 아웃라인/캐릭터/메타용
+  heavy: string;  // Free 티어: 1화 완성본용 & Pro 티어: 전체
+}
+
+export const AI_MODELS: Record<AIProvider, AIModelConfig> = {
+  gemini: { light: "gemini-2.5-flash", heavy: "gemini-3.1-pro-preview" },
+  grok: { light: "grok-4-1-fast-non-reasoning", heavy: "grok-4.20-0309-reasoning" },
+  anthropic: { light: "claude-sonnet-4-20250514", heavy: "claude-sonnet-4-6" },
+};
+
+export const AI_PROVIDER_OPTIONS: { value: AIProvider; label: string; freeModel: string; proModel: string }[] = [
+  { value: "gemini", label: "Gemini (Google)", freeModel: "Gemini 2.5 Flash / 3.1 Pro", proModel: "Gemini 3.1 Pro" },
+  { value: "grok", label: "Grok (xAI)", freeModel: "Grok 4.1 Fast / 4.20", proModel: "Grok 4.20" },
+  { value: "anthropic", label: "Claude (Anthropic)", freeModel: "Sonnet 4 / Sonnet 4.6", proModel: "Sonnet 4.6" },
 ];
 
 export type Tier = "free" | "pro" | "enterprise";

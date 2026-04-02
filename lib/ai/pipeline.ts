@@ -7,19 +7,42 @@ import {
 } from "./prompts";
 import type {
   AIProvider,
+  GenerationStage,
   GenerationInput,
   OutlineData,
   CharacterData,
   StreamEvent,
+  Tier,
   TokenUsage,
 } from "@/types";
+import { AI_MODELS } from "@/types";
 
 type SendEvent = (event: StreamEvent) => void;
+
+function getModelForStage(
+  provider: AIProvider,
+  tier: Tier,
+  stage: GenerationStage
+): string {
+  const models = AI_MODELS[provider];
+
+  // Pro: 모든 단계에 최신 모델
+  if (tier === "pro" || tier === "enterprise") {
+    return models.heavy;
+  }
+
+  // Free: 1화 완성본만 상위 모델, 나머지는 경량 모델
+  if (stage === "first_episode") {
+    return models.heavy;
+  }
+  return models.light;
+}
 
 export async function runGenerationPipeline(
   input: GenerationInput,
   sendEvent: SendEvent,
-  provider: AIProvider = "gemini"
+  provider: AIProvider = "gemini",
+  tier: Tier = "free"
 ): Promise<{
   outline: OutlineData | null;
   characters: CharacterData[] | null;
@@ -45,7 +68,12 @@ export async function runGenerationPipeline(
 
   const outlineUsage = await streamAI(
     provider,
-    { system: outlinePrompt.system, user: outlinePrompt.user, maxTokens: 8000 },
+    {
+      system: outlinePrompt.system,
+      user: outlinePrompt.user,
+      maxTokens: 8000,
+      model: getModelForStage(provider, tier, "outline"),
+    },
     (text) => {
       outlineText += text;
       sendEvent({ stage: "outline", status: "streaming", content: text });
@@ -71,7 +99,12 @@ export async function runGenerationPipeline(
 
   const charUsage = await streamAI(
     provider,
-    { system: charPrompt.system, user: charPrompt.user, maxTokens: 6000 },
+    {
+      system: charPrompt.system,
+      user: charPrompt.user,
+      maxTokens: 6000,
+      model: getModelForStage(provider, tier, "characters"),
+    },
     (text) => {
       charText += text;
       sendEvent({ stage: "characters", status: "streaming", content: text });
@@ -97,7 +130,12 @@ export async function runGenerationPipeline(
 
   const episodeUsage = await streamAI(
     provider,
-    { system: episodePrompt.system, user: episodePrompt.user, maxTokens: 8000 },
+    {
+      system: episodePrompt.system,
+      user: episodePrompt.user,
+      maxTokens: 8000,
+      model: getModelForStage(provider, tier, "first_episode"),
+    },
     (text) => {
       episodeText += text;
       sendEvent({ stage: "first_episode", status: "streaming", content: text });
@@ -115,7 +153,12 @@ export async function runGenerationPipeline(
 
   const metaUsage = await streamAI(
     provider,
-    { system: metaPrompt.system, user: metaPrompt.user, maxTokens: 3000 },
+    {
+      system: metaPrompt.system,
+      user: metaPrompt.user,
+      maxTokens: 3000,
+      model: getModelForStage(provider, tier, "meta"),
+    },
     (text) => {
       metaText += text;
       sendEvent({ stage: "meta", status: "streaming", content: text });
@@ -134,19 +177,29 @@ export async function runGenerationPipeline(
   }
   sendEvent({ stage: "meta", status: "completed" });
 
-  // Estimate cost based on provider
-  tokenUsage.cost_estimate = estimateCost(provider, tokenUsage);
+  // Estimate cost based on provider (blended rate for mixed models)
+  tokenUsage.cost_estimate = estimateCost(provider, tier, tokenUsage);
 
   return { outline, characters, firstEpisode, seo, tokenUsage };
 }
 
-function estimateCost(provider: AIProvider, usage: TokenUsage): number {
-  const rates: Record<AIProvider, { input: number; output: number }> = {
-    anthropic: { input: 3, output: 15 },     // Claude Sonnet: $3/$15 per 1M
-    gemini: { input: 0.15, output: 0.6 },    // Gemini 2.5 Flash: $0.15/$0.60 per 1M
-    grok: { input: 0.3, output: 0.5 },       // Grok 3 Mini: $0.30/$0.50 per 1M
+function estimateCost(provider: AIProvider, tier: Tier, usage: TokenUsage): number {
+  // Pro uses heavy model pricing, Free uses approximate blend
+  const rates: Record<AIProvider, { free: { input: number; output: number }; pro: { input: number; output: number } }> = {
+    gemini: {
+      free: { input: 0.5, output: 2 },      // blended Flash + 3.1 Pro
+      pro: { input: 1.25, output: 10 },      // Gemini 3.1 Pro
+    },
+    grok: {
+      free: { input: 0.6, output: 1.9 },     // blended 4.1 Fast + 4.20
+      pro: { input: 2, output: 6 },           // Grok 4.20
+    },
+    anthropic: {
+      free: { input: 3, output: 15 },         // blended Sonnet 4 + 4.6
+      pro: { input: 3, output: 15 },          // Sonnet 4.6
+    },
   };
-  const r = rates[provider];
+  const r = tier === "pro" || tier === "enterprise" ? rates[provider].pro : rates[provider].free;
   return (usage.input_tokens / 1_000_000) * r.input +
     (usage.output_tokens / 1_000_000) * r.output;
 }

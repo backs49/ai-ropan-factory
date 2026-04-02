@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { updateAIProvider } from "@/lib/actions/settings";
 import { Button } from "@/components/ui/button";
-import type { AIProvider } from "@/types";
+import type { AIProvider, Tier } from "@/types";
 import { AI_PROVIDER_OPTIONS } from "@/types";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 
-export function ProviderSelector({ current }: { current: AIProvider }) {
+export function ProviderSelector({ current, tier }: { current: AIProvider; tier: Tier }) {
   const [selected, setSelected] = useState<AIProvider>(current);
   const [saving, setSaving] = useState(false);
 
@@ -23,6 +23,8 @@ export function ProviderSelector({ current }: { current: AIProvider }) {
       toast.success("AI 모델이 변경되었습니다.");
     }
   }
+
+  const isPro = tier === "pro" || tier === "enterprise";
 
   return (
     <div className="space-y-3">
@@ -40,7 +42,9 @@ export function ProviderSelector({ current }: { current: AIProvider }) {
           >
             <div>
               <div className="font-medium text-sm">{opt.label}</div>
-              <div className="text-xs text-muted-foreground">모델: {opt.model}</div>
+              <div className="text-xs text-muted-foreground">
+                {isPro ? `모델: ${opt.proModel}` : `모델: ${opt.freeModel}`}
+              </div>
             </div>
             {selected === opt.value && (
               <Check className="h-4 w-4 text-primary" />
@@ -48,6 +52,11 @@ export function ProviderSelector({ current }: { current: AIProvider }) {
           </button>
         ))}
       </div>
+      {!isPro && (
+        <p className="text-xs text-muted-foreground">
+          Free: 1화 완성본에만 상위 모델 적용 · Pro: 전 단계 최신 모델
+        </p>
+      )}
       {selected !== current && (
         <Button onClick={handleSave} disabled={saving} size="sm">
           {saving ? "저장 중..." : "변경 저장"}

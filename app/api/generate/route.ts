@@ -1,7 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { createClient } from "@/lib/supabase/server";
 import { runGenerationPipeline } from "@/lib/ai/pipeline";
-import type { AIProvider, GenerationInput, StreamEvent } from "@/types";
+import type { AIProvider, Tier, GenerationInput, StreamEvent } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -41,11 +41,12 @@ export async function GET(request: Request) {
   // Get user's AI provider preference
   const { data: profile } = await supabase
     .from("profiles")
-    .select("ai_provider")
+    .select("ai_provider, tier")
     .eq("id", user.id)
     .single();
 
   const aiProvider = (profile?.ai_provider as AIProvider) || "gemini";
+  const userTier = (profile?.tier as Tier) || "free";
 
   const serviceClient = await createServiceClient();
 
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
           variation_of: project.variation_of,
         };
 
-        const result = await runGenerationPipeline(input, sendEvent, aiProvider);
+        const result = await runGenerationPipeline(input, sendEvent, aiProvider, userTier);
 
         await serviceClient
           .from("projects")

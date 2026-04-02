@@ -54,7 +54,7 @@ export default async function SettingsPage() {
           <CardDescription>생성에 사용할 AI 모델을 선택하세요</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProviderSelector current={(p.ai_provider || "gemini") as AIProvider} />
+          <ProviderSelector current={(p.ai_provider || "gemini") as AIProvider} tier={p.tier} />
         </CardContent>
       </Card>
 

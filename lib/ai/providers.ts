@@ -4,6 +4,7 @@ export interface AIStreamParams {
   system: string;
   user: string;
   maxTokens: number;
+  model: string;
 }
 
 export interface AIStreamResult {
@@ -35,7 +36,7 @@ async function streamAnthropic(
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
   const stream = client.messages.stream({
-    model: "claude-sonnet-4-20250514",
+    model: params.model,
     max_tokens: params.maxTokens,
     system: params.system,
     messages: [{ role: "user", content: params.user }],
@@ -66,7 +67,7 @@ async function streamGemini(
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
   const response = await ai.models.generateContentStream({
-    model: "gemini-2.5-flash",
+    model: params.model,
     contents: [{ role: "user", parts: [{ text: params.user }] }],
     config: {
       systemInstruction: params.system,
@@ -105,7 +106,7 @@ async function streamGrok(
   });
 
   const stream = await client.chat.completions.create({
-    model: "grok-3-mini",
+    model: params.model,
     max_tokens: params.maxTokens,
     stream: true,
     stream_options: { include_usage: true },
