@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import type { Profile } from "@/types";
+import type { AIProvider, Profile } from "@/types";
 import { TIER_LIMITS } from "@/types";
+import { ProviderSelector } from "@/components/settings/provider-selector";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -44,6 +45,16 @@ export default async function SettingsPage() {
             <span className="text-muted-foreground">닉네임</span>
             <span>{p.display_name || "-"}</span>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">AI 모델 선택</CardTitle>
+          <CardDescription>생성에 사용할 AI 모델을 선택하세요</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProviderSelector current={(p.ai_provider || "gemini") as AIProvider} />
         </CardContent>
       </Card>
 

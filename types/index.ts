@@ -1,3 +1,11 @@
+export type AIProvider = "anthropic" | "gemini" | "grok";
+
+export const AI_PROVIDER_OPTIONS: { value: AIProvider; label: string; model: string }[] = [
+  { value: "gemini", label: "Gemini (Google)", model: "gemini-2.5-flash" },
+  { value: "grok", label: "Grok (xAI)", model: "grok-3-mini" },
+  { value: "anthropic", label: "Claude (Anthropic)", model: "claude-sonnet-4-20250514" },
+];
+
 export type Tier = "free" | "pro" | "enterprise";
 
 export type ProjectStatus =
@@ -11,6 +19,7 @@ export interface Profile {
   email: string;
   display_name: string | null;
   tier: Tier;
+  ai_provider: AIProvider;
   monthly_generations: number;
   monthly_reset_at: string;
   created_at: string;

@@ -1,7 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { createClient } from "@/lib/supabase/server";
-import { runGenerationPipeline } from "@/lib/claude/pipeline";
-import type { GenerationInput, StreamEvent } from "@/types";
+import { runGenerationPipeline } from "@/lib/ai/pipeline";
+import type { AIProvider, GenerationInput, StreamEvent } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -38,6 +38,15 @@ export async function GET(request: Request) {
     return new Response("Project already processed", { status: 400 });
   }
 
+  // Get user's AI provider preference
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("ai_provider")
+    .eq("id", user.id)
+    .single();
+
+  const aiProvider = (profile?.ai_provider as AIProvider) || "gemini";
+
   const serviceClient = await createServiceClient();
 
   const encoder = new TextEncoder();
@@ -58,7 +67,7 @@ export async function GET(request: Request) {
           variation_of: project.variation_of,
         };
 
-        const result = await runGenerationPipeline(input, sendEvent);
+        const result = await runGenerationPipeline(input, sendEvent, aiProvider);
 
         await serviceClient
           .from("projects")
