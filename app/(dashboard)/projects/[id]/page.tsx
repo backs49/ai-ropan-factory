@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getProject } from "@/lib/actions/projects";
+import { getEpisodes } from "@/lib/actions/episodes";
+import { createClient } from "@/lib/supabase/server";
 import { GenerationStream } from "@/components/generate/generation-stream";
 import { OutlineView } from "@/components/project/outline-view";
 import { CharacterSheet } from "@/components/project/character-sheet";
-import { EpisodeView } from "@/components/project/episode-view";
+import { EpisodeList } from "@/components/project/episode-list";
 import { DownloadButton } from "@/components/project/download-button";
 import { RetryButton } from "@/components/project/retry-button";
 import { CopyPrompt } from "@/components/project/copy-prompt";
@@ -13,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, RefreshCw } from "lucide-react";
-import type { OutlineData, CharacterData, CoverPrompt, SeoData } from "@/types";
+import type { OutlineData, CharacterData, CoverPrompt, SeoData, Tier } from "@/types";
 
 export default async function ProjectPage({
   params,
@@ -51,6 +53,23 @@ export default async function ProjectPage({
 
   const hasMissingStages = outline && (!characters || !project.first_episode || (!seo && !coverPrompts));
 
+  // 에피소드 + 프로필 조회
+  const episodes = await getEpisodes(id);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("tier").eq("id", user.id).single()
+    : { data: null };
+  const tier = (profile?.tier as Tier) || "free";
+
+  const FREE_EPISODE_LIMIT = 3;
+  const canGenerateMore =
+    tier !== "free" || episodes.length < FREE_EPISODE_LIMIT;
+  const limitReason =
+    !canGenerateMore
+      ? `무료 플랜에서는 프로젝트당 ${FREE_EPISODE_LIMIT}화까지 생성 가능합니다. Pro로 업그레이드하세요.`
+      : undefined;
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -86,7 +105,7 @@ export default async function ProjectPage({
         <TabsList className="w-full justify-start">
           <TabsTrigger value="outline">아웃라인</TabsTrigger>
           <TabsTrigger value="characters">캐릭터</TabsTrigger>
-          <TabsTrigger value="episode">1화</TabsTrigger>
+          <TabsTrigger value="episode">에피소드 ({episodes.length})</TabsTrigger>
           <TabsTrigger value="meta">표지 & SEO</TabsTrigger>
         </TabsList>
 
@@ -103,7 +122,17 @@ export default async function ProjectPage({
         </TabsContent>
 
         <TabsContent value="episode" className="mt-4">
-          {project.first_episode ? <EpisodeView content={project.first_episode} /> : <p className="text-muted-foreground">1화 데이터가 없습니다.</p>}
+          {episodes.length > 0 ? (
+            <EpisodeList
+              episodes={episodes}
+              projectId={project.id}
+              episodeCount={project.episode_count}
+              canGenerateMore={canGenerateMore}
+              limitReason={limitReason}
+            />
+          ) : (
+            <p className="text-muted-foreground">에피소드 데이터가 없습니다.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="meta" className="mt-4 space-y-4">

@@ -105,6 +105,15 @@ export interface SeoData {
   description: string;
 }
 
+export interface Episode {
+  id: string;
+  project_id: string;
+  episode_number: number;
+  content: string;
+  status: "completed" | "generating" | "failed";
+  created_at: string;
+}
+
 export interface TokenUsage {
   input_tokens: number;
   output_tokens: number;

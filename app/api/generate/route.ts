@@ -102,6 +102,21 @@ export async function GET(request: Request) {
             .from("profiles")
             .update({ monthly_generations: currentGenerations + 1 })
             .eq("id", user.id);
+
+          // 1화를 episodes 테이블에도 저장
+          if (result.firstEpisode) {
+            await serviceClient
+              .from("episodes")
+              .upsert(
+                {
+                  project_id: projectId,
+                  episode_number: 1,
+                  content: result.firstEpisode,
+                  status: "completed",
+                },
+                { onConflict: "project_id,episode_number" }
+              );
+          }
         }
 
         sendEvent({

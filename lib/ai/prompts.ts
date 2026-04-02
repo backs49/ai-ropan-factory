@@ -120,6 +120,57 @@ ${characters}
   };
 }
 
+export function getNextEpisodePrompt(
+  input: GenerationInput,
+  outline: OutlineData,
+  characters: string,
+  prevEpisodeEnd: string,
+  episodeNumber: number,
+  totalEpisodes: number
+): { system: string; user: string } {
+  // 아웃라인에서 해당 화의 정보 찾기
+  const allEpisodes = [
+    ...outline.act1.episodes,
+    ...outline.act2.episodes,
+    ...outline.act3.episodes,
+  ];
+  const epOutline = allEpisodes.find((e) => e.episode_number === episodeNumber);
+  const isLastEpisode = episodeNumber === totalEpisodes;
+
+  return {
+    system: `당신은 한국 웹소설 전문 작가입니다. 카카오페이지, 네이버 시리즈에서 연재하는 프로 작가 수준의 연재소설을 작성합니다.
+
+필수 스타일 규칙:
+- 한국어 웹소설 문체를 완벽하게 구사하세요
+- 짧은 문장과 긴 문장을 리듬감 있게 섞으세요
+- 대화와 내면 독백을 적절히 배분하세요 (대화 40%, 묘사 30%, 내면 30%)
+- 감각적 묘사를 포함하세요 (시각, 청각, 촉각)
+- 3,000~5,000자 분량으로 작성하세요 (공백 포함)
+- ${input.mood} 분위기를 일관되게 유지하세요
+- 문단 사이에 빈 줄을 넣어 가독성을 높이세요
+- "~했다", "~였다" 등 과거형 서술체를 기본으로 사용하세요
+- 절대 JSON이 아닌 순수 소설 텍스트로만 응답하세요
+- 직전 에피소드의 내용과 자연스럽게 이어지도록 작성하세요
+${isLastEpisode ? "- 이번 화가 마지막 화입니다. 적절한 결말을 작성하세요." : "- 회차 끝에 다음 화가 궁금해지는 클리프행어를 포함하세요."}`,
+    user: `작품 제목: ${outline.title}
+장르: ${input.genre}
+분위기: ${input.mood}
+전체 ${totalEpisodes}화 중 ${episodeNumber}화를 작성합니다.
+
+${epOutline ? `${episodeNumber}화 제목: ${epOutline.title}
+${episodeNumber}화 요약: ${epOutline.summary}
+핵심 사건: ${epOutline.key_event}` : `${episodeNumber}화를 아웃라인의 흐름에 맞춰 작성해주세요.`}
+
+캐릭터 정보:
+${characters}
+
+직전 에피소드 마지막 부분:
+${prevEpisodeEnd}
+
+위 내용을 이어서 ${episodeNumber}화 완성본을 작성해주세요. 3,000~5,000자 분량, 한국어 웹소설 문체로.`,
+  };
+}
+
 export function getMetaPrompt(
   input: GenerationInput,
   outline: OutlineData
