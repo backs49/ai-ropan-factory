@@ -1,12 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from "lucide-react";
 
+declare global {
+  interface Window {
+    TossPayments?: (clientKey: string) => {
+      payment: (opts: { customerKey: string }) => {
+        requestBillingAuth: (opts: {
+          method: string;
+          successUrl: string;
+          failUrl: string;
+        }) => Promise<void>;
+      };
+    };
+  }
+}
+
+function loadTossScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (window.TossPayments) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://js.tosspayments.com/v2/standard";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Toss SDK 로드 실패"));
+    document.head.appendChild(script);
+  });
+}
+
 export function TossCheckout() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,10 +41,9 @@ export function TossCheckout() {
     setError(null);
 
     try {
-      const { loadTossPayments } = await import(
-        "@tosspayments/tosspayments-sdk"
-      );
-      const tossPayments = await loadTossPayments(
+      await loadTossScript();
+
+      const tossPayments = window.TossPayments!(
         process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
       );
 
