@@ -27,14 +27,21 @@ const features = [
   },
   {
     icon: FileText,
-    title: "1화 완성본",
-    description: "4,000~5,000자의 프로급 한국어 웹소설 문체",
+    title: "에피소드 연재",
+    description: "1화부터 N화까지 이어서 생성. 직접 편집도 가능",
   },
   {
     icon: Palette,
     title: "표지 프롬프트 & SEO",
     description: "Midjourney/Flux 프롬프트 + 검색 최적화 제목",
   },
+];
+
+const steps = [
+  { num: "1", title: "장르 & 키워드 입력", desc: "로판, 빙의물, 회귀물 등 장르와 핵심 키워드를 선택" },
+  { num: "2", title: "AI 자동 생성", desc: "아웃라인, 캐릭터, 1화, 표지 프롬프트가 실시간 생성" },
+  { num: "3", title: "이어서 연재", desc: "2화, 3화... 버튼 하나로 다음 화를 계속 생성" },
+  { num: "4", title: "편집 & 다운로드", desc: "마음에 드는 부분은 그대로, 아쉬운 부분은 직접 편집 후 다운로드" },
 ];
 
 export default async function LandingPage() {
@@ -94,8 +101,26 @@ export default async function LandingPage() {
         </p>
       </section>
 
+      {/* How it works */}
+      <section className="mx-auto max-w-6xl px-4 py-16 border-t">
+        <h2 className="text-center text-2xl font-bold mb-10">
+          어떻게 사용하나요?
+        </h2>
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((s) => (
+            <div key={s.num} className="text-center">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                {s.num}
+              </div>
+              <h3 className="font-semibold mb-1">{s.title}</h3>
+              <p className="text-sm text-muted-foreground">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Features */}
-      <section className="mx-auto max-w-6xl px-4 py-16">
+      <section className="mx-auto max-w-6xl px-4 py-16 border-t">
         <h2 className="text-center text-2xl font-bold mb-10">
           한 번의 생성으로 받는 결과물
         </h2>
@@ -131,6 +156,65 @@ export default async function LandingPage() {
             <p className="text-sm text-muted-foreground mt-1">카카오페이지/시리즈 트렌드 반영</p>
           </div>
         </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="mx-auto max-w-6xl px-4 py-16 border-t">
+        <h2 className="text-center text-2xl font-bold mb-2">요금제</h2>
+        <p className="text-center text-muted-foreground mb-10">
+          무료로 시작하고, 필요할 때 업그레이드하세요
+        </p>
+        <div className="grid gap-6 sm:grid-cols-2 max-w-2xl mx-auto">
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <h3 className="font-bold text-lg">Free</h3>
+              <div>
+                <span className="text-3xl font-bold">0</span>
+                <span className="text-muted-foreground">원</span>
+              </div>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>- 프로젝트 최대 3개</li>
+                <li>- 프로젝트당 3화까지</li>
+                <li>- AI 모델 조합 사용</li>
+              </ul>
+              <Button variant="outline" className="w-full" render={<Link href={user ? "/dashboard" : "/signup"} />}>
+                무료로 시작
+              </Button>
+            </CardContent>
+          </Card>
+          <Card className="border-2 border-primary/50">
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-lg">Pro</h3>
+                <Badge variant="secondary">추천</Badge>
+              </div>
+              <div>
+                <span className="text-3xl font-bold">9,900</span>
+                <span className="text-muted-foreground">원/월</span>
+              </div>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>- 프로젝트 무제한</li>
+                <li>- 에피소드 무제한</li>
+                <li>- 최신 고급 AI 모델 전용</li>
+              </ul>
+              <Button className="w-full" render={<Link href={user ? "/pricing" : "/signup"} />}>
+                Pro 시작하기
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="mx-auto max-w-6xl px-4 py-20 text-center border-t">
+        <h2 className="text-2xl font-bold mb-4">지금 바로 시작하세요</h2>
+        <p className="text-muted-foreground mb-6">
+          장르와 키워드만 입력하면 AI가 웹소설 기획을 완성합니다
+        </p>
+        <Button size="lg" render={<Link href={user ? "/generate" : "/signup"} />}>
+          <Sparkles className="mr-2 h-5 w-5" />
+          무료로 시작하기
+        </Button>
       </section>
 
       {/* Footer */}
