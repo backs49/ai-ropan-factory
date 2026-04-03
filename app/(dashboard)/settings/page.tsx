@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import type { AIProvider, Profile } from "@/types";
 import { TIER_LIMITS } from "@/types";
 import { ProviderSelector } from "@/components/settings/provider-selector";
+import { SubscriptionManager } from "@/components/settings/subscription-manager";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -27,6 +29,14 @@ export default async function SettingsPage() {
   const p = profile as Profile;
   const limit = TIER_LIMITS[p.tier];
   const remaining = limit === Infinity ? "무제한" : `${limit - p.monthly_generations}회 남음`;
+
+  // 구독 정보 조회
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", user.id)
+    .in("status", ["active", "cancelled"])
+    .single();
 
   // API 키가 설정된 프로바이더만 활성화
   const enabledProviders: AIProvider[] = [];
@@ -98,17 +108,24 @@ export default async function SettingsPage() {
             )}
           </div>
 
-          {p.tier === "free" && (
-            <>
-              <Separator />
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                <h4 className="font-medium mb-1">Pro로 업그레이드</h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  무제한 생성, 우선 처리, 향후 추가 기능 우선 제공
-                </p>
-                <Button disabled>곧 출시 예정 (Toss Payments 연동 준비 중)</Button>
-              </div>
-            </>
+          <Separator />
+          {p.tier === "free" ? (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <h4 className="font-medium mb-1">Pro로 업그레이드</h4>
+              <p className="text-sm text-muted-foreground mb-3">
+                무제한 생성, 최신 AI 모델, 우선 처리
+              </p>
+              <Button render={<Link href="/pricing" />}>
+                월 9,900원으로 업그레이드
+              </Button>
+            </div>
+          ) : (
+            <SubscriptionManager
+              subscription={subscription ? {
+                status: subscription.status,
+                currentPeriodEnd: subscription.current_period_end,
+              } : null}
+            />
           )}
         </CardContent>
       </Card>

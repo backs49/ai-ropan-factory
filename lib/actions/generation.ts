@@ -35,6 +35,20 @@ export async function createProject(input: GenerationInput): Promise<{
     };
   }
 
+  // 무료 프로젝트 3개 제한
+  if (p.tier === "free") {
+    const { count } = await supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if ((count ?? 0) >= 3) {
+      return {
+        error: "무료 플랜에서는 최대 3개의 프로젝트를 생성할 수 있습니다. 기존 프로젝트를 삭제하거나 Pro로 업그레이드하세요.",
+      };
+    }
+  }
+
   const { data: project, error } = await supabase
     .from("projects")
     .insert({
