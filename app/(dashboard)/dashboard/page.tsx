@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ProjectList } from "@/components/dashboard/project-list";
 import { getProjects } from "@/lib/actions/projects";
 import { createClient } from "@/lib/supabase/server";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Crown } from "lucide-react";
 import type { Tier } from "@/types";
 
 export default async function DashboardPage() {
@@ -28,10 +28,16 @@ export default async function DashboardPage() {
           </p>
         </div>
         {isFreeLimit ? (
-          <Button disabled title="무료 플랜 프로젝트 3개 제한">
-            <Sparkles className="mr-2 h-4 w-4" />
-            프로젝트 제한 도달
-          </Button>
+          <div className="flex gap-2">
+            <Button render={<Link href="/pricing" />}>
+              <Crown className="mr-2 h-4 w-4" />
+              Pro 업그레이드
+            </Button>
+            <Button variant="outline" disabled>
+              <Sparkles className="mr-2 h-4 w-4" />
+              제한 도달
+            </Button>
+          </div>
         ) : (
           <Button render={<Link href="/generate" />}>
             <Sparkles className="mr-2 h-4 w-4" />

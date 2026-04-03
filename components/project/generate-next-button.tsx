@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Crown } from "lucide-react";
 
 export function GenerateNextButton({
   projectId,
@@ -87,21 +88,25 @@ export function GenerateNextButton({
     );
   }
 
+  if (disabled) {
+    return (
+      <Button size="sm" render={<Link href="/pricing" />}>
+        <Crown className="mr-1 h-3.5 w-3.5" />
+        Pro로 계속 생성
+      </Button>
+    );
+  }
+
   return (
     <div>
       <Button
         onClick={handleGenerate}
-        disabled={disabled}
         size="sm"
         variant="outline"
-        title={disabledReason}
       >
         <Plus className="mr-1 h-3.5 w-3.5" />
         {nextEpisodeNumber}화 생성
       </Button>
-      {disabledReason && disabled && (
-        <p className="text-xs text-muted-foreground mt-1">{disabledReason}</p>
-      )}
       {error && <p className="text-sm text-destructive mt-2">{error}</p>}
     </div>
   );
