@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GenerateNextButton } from "./generate-next-button";
 import { updateEpisodeContent } from "@/lib/actions/episodes";
-import { Loader2, RotateCcw, Pencil, Save, X } from "lucide-react";
+import { Loader2, RotateCcw, Pencil, Save, X, Copy, Check } from "lucide-react";
 import type { Episode } from "@/types";
 
 export function EpisodeList({
@@ -31,6 +31,7 @@ export function EpisodeList({
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const selected = episodes.find((ep) => ep.episode_number === selectedNumber);
   const maxEpisodeNumber = episodes.reduce(
@@ -65,6 +66,13 @@ export function EpisodeList({
     } catch {
       setRetrying(null);
     }
+  }
+
+  async function handleCopy() {
+    if (!selected?.content) return;
+    await navigator.clipboard.writeText(selected.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   function startEdit() {
@@ -143,10 +151,20 @@ export function EpisodeList({
             </CardTitle>
             <div className="flex gap-1">
               {selected.status === "completed" && !editing && (
-                <Button variant="ghost" size="sm" onClick={startEdit}>
-                  <Pencil className="mr-1 h-3.5 w-3.5" />
-                  편집
-                </Button>
+                <>
+                  <Button variant="ghost" size="sm" onClick={handleCopy}>
+                    {copied ? (
+                      <Check className="mr-1 h-3.5 w-3.5 text-green-500" />
+                    ) : (
+                      <Copy className="mr-1 h-3.5 w-3.5" />
+                    )}
+                    {copied ? "복사됨" : "복사"}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={startEdit}>
+                    <Pencil className="mr-1 h-3.5 w-3.5" />
+                    편집
+                  </Button>
+                </>
               )}
               {editing && (
                 <>
