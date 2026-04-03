@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GenerateNextButton } from "./generate-next-button";
-import { Loader2, RotateCcw } from "lucide-react";
+import { updateEpisodeContent } from "@/lib/actions/episodes";
+import { Loader2, RotateCcw, Pencil, Save, X } from "lucide-react";
 import type { Episode } from "@/types";
 
 export function EpisodeList({
@@ -27,6 +28,9 @@ export function EpisodeList({
     episodes.length > 0 ? episodes[0].episode_number : 1
   );
   const [retrying, setRetrying] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const selected = episodes.find((ep) => ep.episode_number === selectedNumber);
   const maxEpisodeNumber = episodes.reduce(
@@ -60,6 +64,24 @@ export function EpisodeList({
       };
     } catch {
       setRetrying(null);
+    }
+  }
+
+  function startEdit() {
+    if (selected?.content) {
+      setEditContent(selected.content);
+      setEditing(true);
+    }
+  }
+
+  async function handleSave() {
+    if (!selected) return;
+    setSaving(true);
+    const result = await updateEpisodeContent(selected.id, editContent);
+    setSaving(false);
+    if (!result.error) {
+      setEditing(false);
+      router.refresh();
     }
   }
 
@@ -119,24 +141,63 @@ export function EpisodeList({
             <CardTitle className="text-base">
               {selected.episode_number}화
             </CardTitle>
-            {selected.status === "failed" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleRetry(selected.id)}
-                disabled={retrying === selected.id}
-              >
-                {retrying === selected.id ? (
-                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                )}
-                재생성
-              </Button>
-            )}
+            <div className="flex gap-1">
+              {selected.status === "completed" && !editing && (
+                <Button variant="ghost" size="sm" onClick={startEdit}>
+                  <Pencil className="mr-1 h-3.5 w-3.5" />
+                  편집
+                </Button>
+              )}
+              {editing && (
+                <>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Save className="mr-1 h-3.5 w-3.5" />
+                    )}
+                    저장
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditing(false)}
+                    disabled={saving}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
+              {selected.status === "failed" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRetry(selected.id)}
+                  disabled={retrying === selected.id}
+                >
+                  {retrying === selected.id ? (
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  재생성
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            {selected.status === "completed" && selected.content ? (
+            {editing ? (
+              <textarea
+                className="w-full min-h-[400px] rounded-md border bg-background p-3 text-sm leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+              />
+            ) : selected.status === "completed" && selected.content ? (
               <div className="prose prose-invert max-w-none">
                 {selected.content.split("\n\n").map((paragraph, i) => (
                   <p key={i} className="text-sm leading-relaxed mb-4">

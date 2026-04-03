@@ -8,9 +8,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Download } from "lucide-react";
-import type { Project } from "@/types";
+import type { Project, Episode } from "@/types";
 
-function generateMarkdown(project: Project): string {
+function generateMarkdown(project: Project, episodes: Episode[] = []): string {
   let md = `# ${(project.outline as any)?.title || project.title || "제목 없음"}\n\n`;
   md += `> ${(project.outline as any)?.logline || ""}\n\n`;
   md += `**장르:** ${project.genre} | **분위기:** ${project.mood} | **타겟:** ${project.target_age}\n\n`;
@@ -46,7 +46,14 @@ function generateMarkdown(project: Project): string {
     }
   }
 
-  if (project.first_episode) {
+  if (episodes.length > 0) {
+    md += `## 에피소드\n\n`;
+    for (const ep of episodes) {
+      if (ep.status === "completed" && ep.content) {
+        md += `### ${ep.episode_number}화\n\n${ep.content}\n\n---\n\n`;
+      }
+    }
+  } else if (project.first_episode) {
     md += `## 1화 완성본\n\n${project.first_episode}\n\n`;
   }
 
@@ -80,16 +87,16 @@ function downloadFile(content: string, filename: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-export function DownloadButton({ project }: { project: Project }) {
+export function DownloadButton({ project, episodes = [] }: { project: Project; episodes?: Episode[] }) {
   const title = (project.outline as any)?.title || project.title || "작품";
 
   function handleDownloadMD() {
-    const md = generateMarkdown(project);
+    const md = generateMarkdown(project, episodes);
     downloadFile(md, `${title}.md`, "text/markdown;charset=utf-8");
   }
 
   function handleDownloadTXT() {
-    const md = generateMarkdown(project);
+    const md = generateMarkdown(project, episodes);
     const txt = md
       .replace(/^#{1,3}\s/gm, "")
       .replace(/\*\*/g, "")

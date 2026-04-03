@@ -93,7 +93,7 @@ export default async function ProjectPage({
             <RefreshCw className="mr-2 h-4 w-4" />
             다시 생성
           </Button>
-          <DownloadButton project={project} />
+          <DownloadButton project={project} episodes={episodes} />
         </div>
       </div>
 
