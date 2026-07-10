@@ -9,6 +9,7 @@ import type { AIProvider, Profile } from "@/types";
 import { TIER_LIMITS } from "@/types";
 import { ProviderSelector } from "@/components/settings/provider-selector";
 import { SubscriptionManager } from "@/components/settings/subscription-manager";
+import { DeleteAccount } from "@/components/settings/delete-account";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -127,6 +128,15 @@ export default async function SettingsPage() {
               } : null}
             />
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="text-base text-destructive">회원 탈퇴</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DeleteAccount />
         </CardContent>
       </Card>
     </div>
