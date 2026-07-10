@@ -17,6 +17,9 @@ export function StuckRecovery({ projectId }: { projectId: string }) {
     if (result.error) {
       toast.error(result.error);
       setLoading(false);
+    } else if (result.warning) {
+      toast.warning(result.warning);
+      router.refresh();
     } else {
       toast.success("초기화됐습니다. 사용 횟수는 차감되지 않았어요.");
       router.refresh();

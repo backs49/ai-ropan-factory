@@ -49,7 +49,9 @@ export async function deleteProject(id: string): Promise<{ error?: string }> {
 
 const STUCK_THRESHOLD_MS = 10 * 60 * 1000; // maxDuration(300s)의 2배
 
-export async function recoverStuckProject(id: string): Promise<{ error?: string }> {
+export async function recoverStuckProject(
+  id: string
+): Promise<{ error?: string; warning?: string }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -68,11 +70,26 @@ export async function recoverStuckProject(id: string): Promise<{ error?: string 
     .select("id");
 
   if (error) return { error: error.message };
-  if (!data?.length) return { error: "아직 생성이 진행 중입니다. 잠시 후 다시 시도해주세요." };
+  if (!data?.length)
+    return {
+      error: "아직 생성이 진행 중입니다. 잠시 후 다시 시도해주세요.",
+    };
 
   // 고착된 생성은 서버가 중단돼 환불이 실행되지 못한 케이스 — 쿼터 환불
   const serviceClient = await createServiceClient();
-  await serviceClient.rpc("refund_generation", { p_user_id: user.id });
+  const { error: refundError } = await serviceClient.rpc("refund_generation", {
+    p_user_id: user.id,
+  });
+  if (refundError) {
+    console.error(
+      `[recover] 쿼터 환불 실패 user=${user.id} project=${id}`,
+      refundError
+    );
+    return {
+      warning:
+        "프로젝트는 초기화됐지만 사용 횟수 복구에 실패했습니다. 반복되면 문의해주세요.",
+    };
+  }
 
   return {};
 }
