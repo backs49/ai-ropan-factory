@@ -47,9 +47,21 @@ export async function GET(request: Request) {
 
   const aiProvider = (profile?.ai_provider as AIProvider) || "gemini";
   const userTier = (profile?.tier as Tier) || "free";
-  const currentGenerations = profile?.monthly_generations ?? 0;
 
   const serviceClient = await createServiceClient();
+
+  // 쿼터 원자적 선소비 (실패 시 아래에서 환불) — 동시 요청 이중 소비 차단
+  const { data: consumed, error: consumeError } = await serviceClient.rpc(
+    "consume_generation",
+    { p_user_id: user.id, p_limit: 3 }
+  );
+
+  if (consumeError || !consumed) {
+    return new Response(
+      "무료 체험 3회를 모두 사용했습니다. Pro로 업그레이드하면 무제한으로 생성할 수 있습니다.",
+      { status: 403 }
+    );
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -96,13 +108,12 @@ export async function GET(request: Request) {
           })
           .eq("id", projectId);
 
-        // 성공 시에만 생성 횟수 차감
-        if (isSuccess) {
-          await serviceClient
-            .from("profiles")
-            .update({ monthly_generations: currentGenerations + 1 })
-            .eq("id", user.id);
+        // 실패 시 선소비한 쿼터 환불
+        if (!isSuccess) {
+          await serviceClient.rpc("refund_generation", { p_user_id: user.id });
+        }
 
+        if (isSuccess) {
           // 1화를 episodes 테이블에도 저장
           if (result.firstEpisode) {
             await serviceClient
@@ -132,6 +143,8 @@ export async function GET(request: Request) {
           .from("projects")
           .update({ status: "failed" })
           .eq("id", projectId);
+
+        await serviceClient.rpc("refund_generation", { p_user_id: user.id });
       } finally {
         controller.close();
       }

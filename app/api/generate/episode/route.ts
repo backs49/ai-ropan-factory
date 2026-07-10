@@ -36,6 +36,12 @@ export async function GET(request: Request) {
 
   if (!project) return new Response("Project not found", { status: 404 });
 
+  if (project.status !== "completed") {
+    return new Response("완료된 프로젝트에서만 에피소드를 생성할 수 있습니다.", {
+      status: 400,
+    });
+  }
+
   const outline = project.outline as OutlineData | null;
   if (!outline)
     return new Response("아웃라인이 없어 에피소드를 생성할 수 없습니다.", {
