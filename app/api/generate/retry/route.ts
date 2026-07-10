@@ -1,5 +1,6 @@
 import { createServiceClient, createClient } from "@/lib/supabase/server";
 import { streamAI } from "@/lib/ai/providers";
+import { extractJSON } from "@/lib/ai/pipeline";
 import {
   getCharacterPrompt,
   getFirstEpisodePrompt,
@@ -10,29 +11,6 @@ import { AI_MODELS } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-function extractJSON(text: string): string {
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
-  if (codeBlockMatch) return codeBlockMatch[1].trim();
-
-  const firstBrace = text.indexOf("{");
-  const firstBracket = text.indexOf("[");
-  let start = -1;
-  let endChar = "";
-
-  if (firstBrace === -1 && firstBracket === -1) return text;
-  if (firstBracket === -1 || (firstBrace !== -1 && firstBrace < firstBracket)) {
-    start = firstBrace;
-    endChar = "}";
-  } else {
-    start = firstBracket;
-    endChar = "]";
-  }
-
-  const lastEnd = text.lastIndexOf(endChar);
-  if (lastEnd <= start) return text;
-  return text.substring(start, lastEnd + 1);
-}
 
 function getModel(provider: AIProvider, tier: Tier, isHeavy: boolean): string {
   const models = AI_MODELS[provider];

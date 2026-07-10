@@ -23,7 +23,7 @@ type SendEvent = (event: StreamEvent) => void;
  * AI 응답에서 JSON을 안전하게 추출.
  * Gemini 등이 JSON 앞뒤에 설명 텍스트를 붙이는 경우 처리.
  */
-function extractJSON(text: string): string {
+export function extractJSON(text: string): string {
   // 1) 코드블록 안의 JSON 추출
   const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
   if (codeBlockMatch) {

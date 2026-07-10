@@ -3,7 +3,6 @@ import { streamAI } from "@/lib/ai/providers";
 import { getNextEpisodePrompt } from "@/lib/ai/prompts";
 import type {
   AIProvider,
-  Tier,
   GenerationInput,
   OutlineData,
   StreamEvent,
@@ -62,7 +61,6 @@ export async function GET(request: Request) {
     .single();
 
   const provider = (profile?.ai_provider as AIProvider) || "gemini";
-  const tier = (profile?.tier as Tier) || "free";
 
   // 직전 에피소드 조회
   const { data: prevEpisodeData } = await supabase
@@ -87,10 +85,7 @@ export async function GET(request: Request) {
     episode_count: project.episode_count,
   };
 
-  const model =
-    tier === "pro" || tier === "enterprise"
-      ? AI_MODELS[provider].heavy
-      : AI_MODELS[provider].heavy;
+  const model = AI_MODELS[provider].heavy; // 에피소드 본문은 항상 heavy 모델
 
   const serviceClient = await createServiceClient();
 

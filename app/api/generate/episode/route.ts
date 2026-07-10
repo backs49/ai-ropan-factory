@@ -127,10 +127,7 @@ export async function GET(request: Request) {
     episode_count: project.episode_count,
   };
 
-  const model =
-    tier === "pro" || tier === "enterprise"
-      ? AI_MODELS[provider].heavy
-      : AI_MODELS[provider].heavy; // 에피소드 본문은 항상 heavy 모델
+  const model = AI_MODELS[provider].heavy; // 에피소드 본문은 항상 heavy 모델
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
