@@ -105,6 +105,12 @@ export function SubscriptionManager({
         </>
       )}
 
+      {subscription.status === "past_due" && (
+        <p className="text-sm text-destructive">
+          결제에 실패해 재시도 중입니다. 카드 정보를 확인해주세요. 3일 내 결제가 완료되지 않으면 Free로 전환됩니다.
+        </p>
+      )}
+
       {subscription.status === "cancelled" && (
         <p className="text-xs text-muted-foreground">
           {periodEnd}까지 Pro를 이용할 수 있습니다. 이후 Free로 전환됩니다.

@@ -6,7 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { Sparkles, Crown } from "lucide-react";
 import type { Tier } from "@/types";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ upgraded?: string }>;
+}) {
+  const { upgraded } = await searchParams;
   const projects = await getProjects();
 
   const supabase = await createClient();
@@ -19,6 +24,11 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {upgraded === "true" && (
+        <div className="rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm">
+          🎉 Pro 구독이 시작됐습니다! 이제 무제한으로 생성할 수 있어요.
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">내 작품</h1>
