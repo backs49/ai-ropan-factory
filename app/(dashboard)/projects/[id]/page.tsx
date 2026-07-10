@@ -4,6 +4,7 @@ import { getProject } from "@/lib/actions/projects";
 import { getEpisodes } from "@/lib/actions/episodes";
 import { createClient } from "@/lib/supabase/server";
 import { GenerationStream } from "@/components/generate/generation-stream";
+import { StuckRecovery } from "@/components/project/stuck-recovery";
 import { OutlineView } from "@/components/project/outline-view";
 import { CharacterSheet } from "@/components/project/character-sheet";
 import { EpisodeList } from "@/components/project/episode-list";
@@ -30,6 +31,10 @@ export default async function ProjectPage({
   }
 
   if (project.status === "generating") {
+    const STUCK_THRESHOLD_MS = 10 * 60 * 1000;
+    // eslint-disable-next-line react-hooks/purity
+    const isStuck = Date.now() - new Date(project.updated_at).getTime() > STUCK_THRESHOLD_MS;
+
     return (
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="flex items-center gap-3">
@@ -38,7 +43,7 @@ export default async function ProjectPage({
           </Button>
           <h1 className="text-2xl font-bold">생성 중...</h1>
         </div>
-        <GenerationStream projectId={id} />
+        {isStuck ? <StuckRecovery projectId={id} /> : <GenerationStream projectId={id} />}
       </div>
     );
   }
