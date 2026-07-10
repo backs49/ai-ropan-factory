@@ -45,9 +45,10 @@ export function TossCheckout({ customerKey }: { customerKey: string }) {
       if (!clientKey) {
         throw new Error("결제 설정이 완료되지 않았습니다. 관리자에게 문의하세요.");
       }
-      const tossPayments = window.TossPayments!(clientKey);
 
       await loadTossScript();
+
+      const tossPayments = window.TossPayments!(clientKey);
 
       const payment = tossPayments.payment({
         customerKey,
