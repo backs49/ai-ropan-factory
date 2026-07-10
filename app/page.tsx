@@ -219,8 +219,12 @@ export default async function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t py-8">
-        <div className="mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground">
+        <div className="mx-auto max-w-6xl px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
           <p>AI 로판 팩토리 &copy; 2026. All rights reserved.</p>
+          <div className="flex gap-4 text-xs">
+            <Link href="/terms" className="hover:underline">이용약관</Link>
+            <Link href="/privacy" className="hover:underline">개인정보처리방침</Link>
+          </div>
         </div>
       </footer>
     </div>

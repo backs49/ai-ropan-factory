@@ -52,6 +52,10 @@ export function SignupForm() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "가입 중..." : "무료로 시작하기"}
           </Button>
+          <p className="text-xs text-muted-foreground text-center">
+            가입 시 <Link href="/terms" className="underline">이용약관</Link> 및{" "}
+            <Link href="/privacy" className="underline">개인정보처리방침</Link>에 동의하게 됩니다.
+          </p>
           <p className="text-sm text-muted-foreground">
             이미 계정이 있으신가요?{" "}
             <Link href="/login" className="text-primary hover:underline">로그인</Link>
