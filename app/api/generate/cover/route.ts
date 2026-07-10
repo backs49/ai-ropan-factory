@@ -55,7 +55,15 @@ export async function POST(request: Request) {
     { p_user_id: user.id, p_limit: COVER_MONTHLY_LIMIT }
   );
 
-  if (consumeError || !consumed) {
+  if (consumeError) {
+    console.error(`[cover] 쿼터 RPC 오류 user=${user.id}`, consumeError);
+    return NextResponse.json(
+      { error: "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
+      { status: 500 }
+    );
+  }
+
+  if (!consumed) {
     return NextResponse.json(
       { error: `이번 달 표지 생성 한도(${COVER_MONTHLY_LIMIT}회)를 모두 사용했습니다.` },
       { status: 429 }

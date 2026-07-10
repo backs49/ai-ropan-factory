@@ -82,7 +82,7 @@ Pro-only feature, `POST /api/generate/cover?projectId=...`. Monthly limit `COVER
 ### Free Tier Limits (enforced in multiple places)
 
 - Project count (3, lifetime): `lib/actions/generation.ts` (server action) + `app/(dashboard)/dashboard/page.tsx` (UI)
-- Generation/episode count (3, lifetime — not monthly despite the `monthly_generations` column name): atomically enforced by `consume_generation` RPC in `app/api/generate/route.ts` and `app/api/generate/episode/route.ts`; UI in `components/project/generate-next-button.tsx` (→ redirects to /pricing) and `lib/actions/generation.ts` (pre-check for a friendlier error message before hitting the API).
+- Generation count (3, lifetime — not monthly despite the `monthly_generations` column name): atomically enforced by `consume_generation` RPC in `app/api/generate/route.ts` (the main outline→characters→first_episode→meta pipeline) only. Episode count (`app/api/generate/episode/route.ts`, next-episode generation) is enforced separately via a per-project count check against `FREE_EPISODE_LIMIT = 3` (무료 티어) — it does not call `consume_generation`. UI in `components/project/generate-next-button.tsx` (→ redirects to /pricing) and `lib/actions/generation.ts` (pre-check for a friendlier error message before hitting the API).
 - Cover count (20/month, Pro only): `consume_cover_generation` RPC in `app/api/generate/cover/route.ts`.
 
 ### Auth Flow

@@ -67,7 +67,7 @@ export async function recoverStuckProject(
     .eq("user_id", user.id)
     .eq("status", "generating")
     .lt("updated_at", cutoff)
-    .select("id");
+    .select("id, generation_started_at");
 
   if (error) return { error: error.message };
   if (!data?.length)
@@ -75,20 +75,23 @@ export async function recoverStuckProject(
       error: "아직 생성이 진행 중입니다. 잠시 후 다시 시도해주세요.",
     };
 
-  // 고착된 생성은 서버가 중단돼 환불이 실행되지 못한 케이스 — 쿼터 환불
-  const serviceClient = await createServiceClient();
-  const { error: refundError } = await serviceClient.rpc("refund_generation", {
-    p_user_id: user.id,
-  });
-  if (refundError) {
-    console.error(
-      `[recover] 쿼터 환불 실패 user=${user.id} project=${id}`,
-      refundError
-    );
-    return {
-      warning:
-        "프로젝트는 초기화됐지만 사용 횟수 복구에 실패했습니다. 반복되면 문의해주세요.",
-    };
+  // 쿼터가 실제로 소비된 경우(생성이 시작된 경우)에만 환불 — 미소비 상태를 잘못 환불하지 않도록
+  if (data[0].generation_started_at) {
+    // 고착된 생성은 서버가 중단돼 환불이 실행되지 못한 케이스 — 쿼터 환불
+    const serviceClient = await createServiceClient();
+    const { error: refundError } = await serviceClient.rpc("refund_generation", {
+      p_user_id: user.id,
+    });
+    if (refundError) {
+      console.error(
+        `[recover] 쿼터 환불 실패 user=${user.id} project=${id}`,
+        refundError
+      );
+      return {
+        warning:
+          "프로젝트는 초기화됐지만 사용 횟수 복구에 실패했습니다. 반복되면 문의해주세요.",
+      };
+    }
   }
 
   return {};

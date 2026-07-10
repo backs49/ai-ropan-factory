@@ -9,10 +9,13 @@ alter table subscriptions add constraint subscriptions_status_check
 alter table payments add constraint payments_status_check
   check (status in ('pending', 'paid', 'failed', 'cancelled'));
 
--- 계정 삭제(auth.users 삭제) 시 결제/구독 기록도 삭제되도록 cascade
+-- 결제 기록은 전자상거래법상 5년 보관 — 계정 삭제 시 연결만 해제(set null)
+alter table payments alter column user_id drop not null;
 alter table payments drop constraint payments_user_id_fkey;
 alter table payments add constraint payments_user_id_fkey
-  foreign key (user_id) references auth.users(id) on delete cascade;
+  foreign key (user_id) references auth.users(id) on delete set null;
+
+-- 계정 삭제(auth.users 삭제) 시 구독 기록은 삭제되도록 cascade
 alter table subscriptions drop constraint subscriptions_user_id_fkey;
 alter table subscriptions add constraint subscriptions_user_id_fkey
   foreign key (user_id) references auth.users(id) on delete cascade;

@@ -18,7 +18,7 @@ export async function POST() {
     .from("subscriptions")
     .select("*")
     .eq("user_id", user.id)
-    .eq("status", "active")
+    .in("status", ["active", "past_due"])
     .single();
 
   if (!sub) {

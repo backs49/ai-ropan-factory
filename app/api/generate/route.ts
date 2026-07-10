@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { createClient } from "@/lib/supabase/server";
 import { runGenerationPipeline } from "@/lib/ai/pipeline";
 import type { AIProvider, Tier, GenerationInput, StreamEvent } from "@/types";
+import { TIER_LIMITS } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -50,13 +51,36 @@ export async function GET(request: Request) {
 
   const serviceClient = await createServiceClient();
 
+  // 원자적 시작 클레임 — 새로고침/동시 요청으로 인한 중복 파이프라인·중복 쿼터 소비 차단
+  const { data: claimed, error: claimError } = await supabase
+    .from("projects")
+    .update({ generation_started_at: new Date().toISOString() })
+    .eq("id", projectId)
+    .eq("user_id", user.id)
+    .is("generation_started_at", null)
+    .select("id");
+
+  if (claimError || !claimed?.length) {
+    return new Response("이미 생성이 시작된 프로젝트입니다. 잠시 후 프로젝트 페이지에서 확인해주세요.", {
+      status: 409,
+    });
+  }
+
   // 쿼터 원자적 선소비 (실패 시 아래에서 환불) — 동시 요청 이중 소비 차단
   const { data: consumed, error: consumeError } = await serviceClient.rpc(
     "consume_generation",
-    { p_user_id: user.id, p_limit: 3 }
+    { p_user_id: user.id, p_limit: TIER_LIMITS.free }
   );
 
   if (consumeError || !consumed) {
+    await serviceClient
+      .from("projects")
+      .update({ generation_started_at: null })
+      .eq("id", projectId);
+    if (consumeError) {
+      console.error(`[generate] 쿼터 RPC 오류 user=${user.id}`, consumeError);
+      return new Response("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", { status: 500 });
+    }
     return new Response(
       "무료 체험 3회를 모두 사용했습니다. Pro로 업그레이드하면 무제한으로 생성할 수 있습니다.",
       { status: 403 }

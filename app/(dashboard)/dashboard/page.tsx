@@ -20,7 +20,7 @@ export default async function DashboardPage({
     ? await supabase.from("profiles").select("tier").eq("id", user.id).single()
     : { data: null };
   const tier = (profile?.tier as Tier) || "free";
-  const isFreeLimit = tier === "free" && projects.length >= 3;
+  const isFreeLimit = tier === "free" && projects.filter((p) => p.status !== "failed").length >= 3;
 
   return (
     <div className="space-y-6">

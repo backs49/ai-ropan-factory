@@ -36,7 +36,7 @@ export default async function SettingsPage() {
     .from("subscriptions")
     .select("*")
     .eq("user_id", user.id)
-    .in("status", ["active", "cancelled"])
+    .in("status", ["active", "past_due", "cancelled"])
     .single();
 
   // API 키가 설정된 프로바이더만 활성화

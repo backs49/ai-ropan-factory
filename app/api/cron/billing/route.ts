@@ -58,7 +58,8 @@ export async function GET(request: Request) {
           headers: {
             Authorization: `Basic ${tossAuth}`,
             "Content-Type": "application/json",
-            "Idempotency-Key": orderId,
+            // 멱등키는 시도일 단위 — 전일의 거절 응답이 재생되지 않도록. 이중 청구는 동일 orderId 재승인 거부로 방지됨.
+            "Idempotency-Key": `${orderId}_${nowIso.slice(0, 10)}`,
           },
           body: JSON.stringify({
             customerKey: sub.customer_key ?? sub.user_id,
@@ -141,19 +142,28 @@ export async function GET(request: Request) {
 
       try {
         if (now > graceEnd) {
-          await serviceClient
+          const { error: subError } = await serviceClient
             .from("subscriptions")
             .update({ status: "failed" })
             .eq("id", sub.id);
-          await serviceClient
+          if (subError) {
+            console.error(`[WARN] 구독 상태 전환 실패. sub=${sub.id}`, subError);
+          }
+          const { error: profileError } = await serviceClient
             .from("profiles")
             .update({ tier: "free" })
             .eq("id", sub.user_id);
+          if (profileError) {
+            console.error(`[WARN] 구독 상태 전환 실패. sub=${sub.id}`, profileError);
+          }
         } else if (sub.status !== "past_due") {
-          await serviceClient
+          const { error: subError } = await serviceClient
             .from("subscriptions")
             .update({ status: "past_due" })
             .eq("id", sub.id);
+          if (subError) {
+            console.error(`[WARN] 구독 상태 전환 실패. sub=${sub.id}`, subError);
+          }
         }
       } catch (error) {
         // DB 예외로 배치 전체가 중단되지 않도록 로깅 후 다음 sub로 진행
@@ -174,14 +184,20 @@ export async function GET(request: Request) {
 
   for (const sub of cancelledExpired ?? []) {
     try {
-      await serviceClient
+      const { error: profileError } = await serviceClient
         .from("profiles")
         .update({ tier: "free" })
         .eq("id", sub.user_id);
-      await serviceClient
+      if (profileError) {
+        console.error(`[WARN] 해지 구독 만료 처리 실패. sub=${sub.id}`, profileError);
+      }
+      const { error: subError } = await serviceClient
         .from("subscriptions")
         .update({ status: "expired" })
         .eq("id", sub.id);
+      if (subError) {
+        console.error(`[WARN] 해지 구독 만료 처리 실패. sub=${sub.id}`, subError);
+      }
     } catch (error) {
       // DB 예외로 배치 전체가 중단되지 않도록 로깅 후 다음 sub로 진행
       console.error(`[WARN] 해지 구독 만료 처리 실패. sub=${sub.id}`, error);
