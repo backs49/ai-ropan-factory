@@ -70,8 +70,19 @@ export async function GET(request: Request) {
       );
 
       if (res.ok) {
+        // 결제는 이미 승인됨 — 이후 본문 파싱/DB 기록이 실패해도 charged는 유지
+        // (결정적 orderId + Idempotency-Key 덕분에 다음 실행에서 안전하게 재시도됨)
         charged = true;
-        const paymentData = await res.json();
+
+        let paymentData: { paymentKey?: string; method?: string } = {};
+        try {
+          paymentData = await res.json();
+        } catch {
+          console.error(
+            `[WARN] 갱신 응답 본문 파싱 실패 (결제는 성공). sub=${sub.id} orderId=${orderId}`
+          );
+        }
+
         const newStart = periodEnd;
         const newEnd = addOneMonth(periodEnd);
 
@@ -93,17 +104,26 @@ export async function GET(request: Request) {
         }
 
         // upsert: 재시도로 같은 orderId가 이미 있으면 무시
-        await serviceClient.from("payments").upsert(
-          {
-            user_id: sub.user_id,
-            order_id: orderId,
-            payment_key: paymentData.paymentKey,
-            amount: PRO_AMOUNT,
-            status: "paid",
-            method: paymentData.method,
-          },
-          { onConflict: "order_id", ignoreDuplicates: true }
-        );
+        const { error: paymentsError } = await serviceClient
+          .from("payments")
+          .upsert(
+            {
+              user_id: sub.user_id,
+              order_id: orderId,
+              payment_key: paymentData.paymentKey,
+              amount: PRO_AMOUNT,
+              status: "paid",
+              method: paymentData.method,
+            },
+            { onConflict: "order_id", ignoreDuplicates: true }
+          );
+
+        if (paymentsError) {
+          console.error(
+            `[WARN] 갱신 결제 기록 저장 실패. sub=${sub.id} orderId=${orderId}`,
+            paymentsError
+          );
+        }
       } else {
         const err = await res.json();
         failMessage = err.message ?? "unknown";
@@ -119,20 +139,25 @@ export async function GET(request: Request) {
       const graceEnd = new Date(periodEnd);
       graceEnd.setDate(graceEnd.getDate() + GRACE_DAYS);
 
-      if (now > graceEnd) {
-        await serviceClient
-          .from("subscriptions")
-          .update({ status: "failed" })
-          .eq("id", sub.id);
-        await serviceClient
-          .from("profiles")
-          .update({ tier: "free" })
-          .eq("id", sub.user_id);
-      } else if (sub.status !== "past_due") {
-        await serviceClient
-          .from("subscriptions")
-          .update({ status: "past_due" })
-          .eq("id", sub.id);
+      try {
+        if (now > graceEnd) {
+          await serviceClient
+            .from("subscriptions")
+            .update({ status: "failed" })
+            .eq("id", sub.id);
+          await serviceClient
+            .from("profiles")
+            .update({ tier: "free" })
+            .eq("id", sub.user_id);
+        } else if (sub.status !== "past_due") {
+          await serviceClient
+            .from("subscriptions")
+            .update({ status: "past_due" })
+            .eq("id", sub.id);
+        }
+      } catch (error) {
+        // DB 예외로 배치 전체가 중단되지 않도록 로깅 후 다음 sub로 진행
+        console.error(`[WARN] 구독 상태 전환 실패. sub=${sub.id}`, error);
       }
 
       results.push({ userId: sub.user_id, success: false, error: failMessage });
@@ -148,14 +173,19 @@ export async function GET(request: Request) {
     .limit(BATCH_LIMIT);
 
   for (const sub of cancelledExpired ?? []) {
-    await serviceClient
-      .from("profiles")
-      .update({ tier: "free" })
-      .eq("id", sub.user_id);
-    await serviceClient
-      .from("subscriptions")
-      .update({ status: "expired" })
-      .eq("id", sub.id);
+    try {
+      await serviceClient
+        .from("profiles")
+        .update({ tier: "free" })
+        .eq("id", sub.user_id);
+      await serviceClient
+        .from("subscriptions")
+        .update({ status: "expired" })
+        .eq("id", sub.id);
+    } catch (error) {
+      // DB 예외로 배치 전체가 중단되지 않도록 로깅 후 다음 sub로 진행
+      console.error(`[WARN] 해지 구독 만료 처리 실패. sub=${sub.id}`, error);
+    }
   }
 
   return NextResponse.json({
