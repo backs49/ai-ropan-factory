@@ -56,9 +56,15 @@ export async function requestPasswordReset(formData: FormData): Promise<{
 
   if (!email) return { error: "이메일을 입력해주세요." };
 
-  const headersList = await headers();
-  const origin = headersList.get("origin") ?? headersList.get("host") ?? "";
-  const baseUrl = origin.startsWith("http") ? origin : `https://${origin}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  let baseUrl: string;
+  if (siteUrl) {
+    baseUrl = siteUrl.replace(/\/$/, "");
+  } else {
+    const headersList = await headers();
+    const origin = headersList.get("origin") ?? headersList.get("host") ?? "";
+    baseUrl = origin.startsWith("http") ? origin : `https://${origin}`;
+  }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${baseUrl}/reset-password`,
