@@ -55,13 +55,29 @@ export function SubscriptionManager({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">구독 상태</span>
-        <Badge variant={subscription.status === "active" ? "default" : "secondary"}>
-          {subscription.status === "active" ? "활성" : "해지 예정"}
+        <Badge
+          variant={
+            subscription.status === "active"
+              ? "default"
+              : subscription.status === "past_due"
+                ? "destructive"
+                : "secondary"
+          }
+        >
+          {subscription.status === "active"
+            ? "활성"
+            : subscription.status === "past_due"
+              ? "결제 재시도 중"
+              : "해지 예정"}
         </Badge>
       </div>
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">
-          {subscription.status === "active" ? "다음 결제일" : "Pro 만료일"}
+          {subscription.status === "active"
+            ? "다음 결제일"
+            : subscription.status === "past_due"
+              ? "재시도 기한"
+              : "Pro 만료일"}
         </span>
         <span>{periodEnd}</span>
       </div>
