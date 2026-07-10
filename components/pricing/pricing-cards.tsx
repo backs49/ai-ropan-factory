@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,9 +26,11 @@ const PRO_FEATURES = [
 export function PricingCards({
   currentTier,
   hasSubscription,
+  customerKey,
 }: {
   currentTier: Tier;
   hasSubscription: boolean;
+  customerKey?: string;
 }) {
   const isPro = currentTier === "pro" || currentTier === "enterprise";
 
@@ -94,8 +97,12 @@ export function PricingCards({
                 Pro 플랜 이용 중
               </p>
             )
+          ) : customerKey ? (
+            <TossCheckout customerKey={customerKey} />
           ) : (
-            <TossCheckout />
+            <Button className="w-full" render={<Link href="/login" />}>
+              로그인 후 구독하기
+            </Button>
           )}
         </CardContent>
       </Card>

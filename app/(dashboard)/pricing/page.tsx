@@ -34,7 +34,7 @@ export default async function PricingPage() {
           AI 웹소설 기획의 모든 잠재력을 Pro로 잠금 해제하세요
         </p>
       </div>
-      <PricingCards currentTier={tier} hasSubscription={hasSubscription} />
+      <PricingCards currentTier={tier} hasSubscription={hasSubscription} customerKey={user?.id} />
     </div>
   );
 }

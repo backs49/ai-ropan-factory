@@ -32,7 +32,7 @@ function loadTossScript(): Promise<void> {
   });
 }
 
-export function TossCheckout() {
+export function TossCheckout({ customerKey }: { customerKey: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,14 +41,16 @@ export function TossCheckout() {
     setError(null);
 
     try {
+      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+      if (!clientKey) {
+        throw new Error("결제 설정이 완료되지 않았습니다. 관리자에게 문의하세요.");
+      }
+      const tossPayments = window.TossPayments!(clientKey);
+
       await loadTossScript();
 
-      const tossPayments = window.TossPayments!(
-        process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
-      );
-
       const payment = tossPayments.payment({
-        customerKey: crypto.randomUUID(),
+        customerKey,
       });
 
       await payment.requestBillingAuth({
