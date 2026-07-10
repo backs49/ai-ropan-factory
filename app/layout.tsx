@@ -7,10 +7,20 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "AI 로판 팩토리 - AI 웹소설 자동 기획 & 생성",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  title: {
+    default: "AI 로판 팩토리 - AI 웹소설 자동 기획 & 생성",
+    template: "%s | AI 로판 팩토리",
+  },
   description:
     "장르, 키워드, 분위기만 입력하면 3막 구조, 캐릭터 시트, 1화 완성본까지 AI가 자동 생성합니다.",
   keywords: ["웹소설", "로판", "AI", "자동 생성", "기획", "캐릭터"],
+  openGraph: {
+    title: "AI 로판 팩토리",
+    description: "AI가 웹소설 기획부터 에피소드까지 자동 생성",
+    type: "website",
+    locale: "ko_KR",
+  },
 };
 
 export default function RootLayout({
