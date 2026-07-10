@@ -100,6 +100,7 @@ export default function PrivacyPage() {
           개인정보 처리에 관한 문의, 불만 처리, 피해 구제 등은 서비스 내 고객센터 또는 아래 이메일을 통해
           접수하실 수 있습니다.
         </p>
+        {/* TODO: 서비스 오픈 전 실제 문의 이메일로 교체 필요 */}
         <p className="text-sm leading-relaxed">이메일: support@ai-ropan-factory.com</p>
       </section>
 
