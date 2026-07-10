@@ -33,6 +33,8 @@ export interface Profile {
   ai_provider: AIProvider;
   monthly_generations: number;
   monthly_reset_at: string;
+  monthly_cover_count: number;
+  cover_reset_at: string;
   created_at: string;
   updated_at: string;
 }
@@ -50,6 +52,7 @@ export interface Project {
   outline: OutlineData | null;
   characters: CharacterData[] | null;
   first_episode: string | null;
+  cover_image_url: string | null;
   cover_prompts: CoverPrompt[] | null;
   seo: SeoData | null;
   variation_of: string | null;
@@ -181,3 +184,5 @@ export const TIER_LIMITS: Record<Tier, number> = {
   pro: Infinity,
   enterprise: Infinity,
 };
+
+export const COVER_MONTHLY_LIMIT = 20;
