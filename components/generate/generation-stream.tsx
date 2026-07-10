@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StageCard } from "./stage-card";
+import { Button } from "@/components/ui/button";
 import type { GenerationStage, StreamEvent } from "@/types";
 
 type StageStatus = "pending" | "started" | "streaming" | "completed" | "error";
@@ -24,16 +25,24 @@ export function GenerationStream({ projectId }: { projectId: string }) {
       ) as Record<GenerationStage, StageState>
   );
   const [done, setDone] = useState(false);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const doneRef = useRef(false);
 
   useEffect(() => {
     const es = new EventSource(`/api/generate?projectId=${projectId}`);
     eventSourceRef.current = es;
 
     es.onmessage = (event) => {
-      const data: StreamEvent = JSON.parse(event.data);
+      let data: StreamEvent;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        return; // 손상된 프레임 무시
+      }
 
       if (data.content === "ALL_DONE") {
+        doneRef.current = true;
         setDone(true);
         es.close();
         router.refresh();
@@ -62,6 +71,11 @@ export function GenerationStream({ projectId }: { projectId: string }) {
 
     es.onerror = () => {
       es.close();
+      if (!doneRef.current) {
+        setStreamError(
+          "생성 연결이 끊어졌습니다. 서버에서는 계속 진행 중일 수 있으니 잠시 후 새로고침해주세요."
+        );
+      }
     };
 
     return () => {
@@ -76,6 +90,14 @@ export function GenerationStream({ projectId }: { projectId: string }) {
           <p className="text-sm text-primary">
             AI가 작품을 생성하고 있습니다. 이 페이지를 벗어나지 마세요.
           </p>
+        </div>
+      )}
+      {streamError && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 space-y-2">
+          <p className="text-sm text-destructive">{streamError}</p>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            새로고침
+          </Button>
         </div>
       )}
       {STAGES.map((stage) => (

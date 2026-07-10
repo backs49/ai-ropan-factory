@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2, Crown } from "lucide-react";
 
@@ -21,11 +22,13 @@ export function GenerateNextButton({
   const [generating, setGenerating] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const doneRef = useRef(false);
 
   async function handleGenerate() {
     setGenerating(true);
     setStreamText("");
     setError(null);
+    doneRef.current = false;
 
     try {
       const eventSource = new EventSource(
@@ -33,19 +36,26 @@ export function GenerateNextButton({
       );
 
       eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        let data: { status?: string; content?: string; error?: string };
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          return; // 손상된 프레임 무시
+        }
 
         if (data.status === "streaming" && data.content) {
           setStreamText((prev) => prev + data.content);
         }
 
         if (data.status === "error") {
+          doneRef.current = true;
           setError(data.error || "생성 중 오류가 발생했습니다.");
           eventSource.close();
           setGenerating(false);
         }
 
         if (data.content === "ALL_DONE") {
+          doneRef.current = true;
           eventSource.close();
           setGenerating(false);
           router.refresh();
@@ -54,8 +64,11 @@ export function GenerateNextButton({
 
       eventSource.onerror = () => {
         eventSource.close();
-        setError("연결이 끊어졌습니다.");
-        setGenerating(false);
+        if (!doneRef.current) {
+          setError("연결이 끊어졌습니다.");
+          toast.error("생성 연결이 끊어졌습니다. 새로고침 후 다시 시도해주세요.");
+          setGenerating(false);
+        }
       };
     } catch {
       setError("생성 요청에 실패했습니다.");
