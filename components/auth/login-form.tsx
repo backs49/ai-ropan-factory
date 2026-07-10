@@ -42,6 +42,11 @@ export function LoginForm() {
           <div className="space-y-2">
             <Label htmlFor="password">비밀번호</Label>
             <Input id="password" name="password" type="password" placeholder="••••••••" required minLength={6} />
+            <div className="text-right">
+              <Link href="/forgot-password" className="text-xs text-muted-foreground underline">
+                비밀번호를 잊으셨나요?
+              </Link>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
