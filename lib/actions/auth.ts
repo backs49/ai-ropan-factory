@@ -26,7 +26,7 @@ export async function signup(formData: FormData) {
   const password = formData.get("password") as string;
   const displayName = formData.get("displayName") as string;
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -36,6 +36,11 @@ export async function signup(formData: FormData) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  // 이메일 확인이 활성화된 환경: 세션이 없으므로 안내 페이지로
+  if (!data.session) {
+    redirect("/check-email");
   }
 
   redirect("/dashboard");
