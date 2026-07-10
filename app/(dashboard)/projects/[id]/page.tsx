@@ -11,6 +11,7 @@ import { EpisodeList } from "@/components/project/episode-list";
 import { DownloadButton } from "@/components/project/download-button";
 import { RetryButton } from "@/components/project/retry-button";
 import { CopyPrompt } from "@/components/project/copy-prompt";
+import { CoverCard } from "@/components/project/cover-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -141,6 +142,12 @@ export default async function ProjectPage({
         </TabsContent>
 
         <TabsContent value="meta" className="mt-4 space-y-4">
+          <CoverCard
+            projectId={project.id}
+            coverUrl={project.cover_image_url}
+            title={outline?.title || project.title || "제목 없음"}
+            isPro={tier !== "free"}
+          />
           {seo && (
             <Card>
               <CardHeader><CardTitle className="text-base">SEO 제목 후보</CardTitle></CardHeader>

@@ -39,6 +39,14 @@ export function ProjectCard({ project }: { project: Project }) {
   return (
     <Card className="transition-colors hover:bg-accent/50 relative">
       <Link href={`/projects/${project.id}`} className="block">
+        {project.cover_image_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={project.cover_image_url}
+            alt=""
+            className="h-32 w-full object-cover object-top rounded-t-lg"
+          />
+        )}
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <CardTitle className="text-base line-clamp-1 pr-8">
