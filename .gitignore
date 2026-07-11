@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 내부 설계 문서
+docs/superpowers/
+CLAUDE.md
+AGENTS.md
