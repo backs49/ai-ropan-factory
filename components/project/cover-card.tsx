@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ImageIcon, Loader2, Lock, RefreshCw } from "lucide-react";
+import { Download, ImageIcon, Loader2, Lock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export function CoverCard({
@@ -21,6 +21,28 @@ export function CoverCard({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload() {
+    if (!coverUrl) return;
+    setDownloading(true);
+    try {
+      // Storage가 다른 도메인이라 <a download>가 안 먹힘 — blob으로 받아 저장
+      const res = await fetch(coverUrl);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title || "표지"}_표지.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("표지 다운로드에 실패했습니다.");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   async function handleGenerate() {
     setLoading(true);
@@ -62,6 +84,22 @@ export function CoverCard({
           <div className="mx-auto flex w-full max-w-[240px] aspect-[2/3] items-center justify-center rounded-lg border border-dashed">
             <ImageIcon className="h-8 w-8 text-muted-foreground" />
           </div>
+        )}
+
+        {coverUrl && (
+          <Button
+            variant="outline"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="w-full"
+          >
+            {downloading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            표지 다운로드
+          </Button>
         )}
 
         {isPro ? (
