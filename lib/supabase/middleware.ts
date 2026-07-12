@@ -43,6 +43,7 @@ export async function updateSession(request: NextRequest) {
       !request.nextUrl.pathname.startsWith("/check-email") &&
       !request.nextUrl.pathname.startsWith("/terms") &&
       !request.nextUrl.pathname.startsWith("/privacy") &&
+      !request.nextUrl.pathname.startsWith("/robots.txt") &&
       !request.nextUrl.pathname.startsWith("/api") &&
       request.nextUrl.pathname !== "/"
     ) {
