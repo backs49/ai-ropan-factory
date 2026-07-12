@@ -130,6 +130,8 @@ export interface GenerationInput {
   mood: string;
   episode_count: number;
   variation_of?: string;
+  /** 변주(다시 생성) 시 원작 정보 — 프롬프트에서 "기존과 다르게" 지시에 사용 */
+  variation_source?: { title: string; logline: string };
 }
 
 export type GenerationStage =

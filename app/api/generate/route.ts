@@ -87,6 +87,22 @@ export async function GET(request: Request) {
     );
   }
 
+  // 변주(다시 생성)인 경우 원작 정보를 조회해 프롬프트에 "기존과 다르게" 지시
+  let variationSource: GenerationInput["variation_source"];
+  if (project.variation_of) {
+    const { data: original } = await supabase
+      .from("projects")
+      .select("title, outline")
+      .eq("id", project.variation_of)
+      .eq("user_id", user.id)
+      .single();
+    const originalOutline = original?.outline as { title?: string; logline?: string } | null;
+    const title = originalOutline?.title ?? original?.title;
+    if (title) {
+      variationSource = { title, logline: originalOutline?.logline ?? "" };
+    }
+  }
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -103,6 +119,7 @@ export async function GET(request: Request) {
           mood: project.mood,
           episode_count: project.episode_count,
           variation_of: project.variation_of,
+          variation_source: variationSource,
         };
 
         const result = await runGenerationPipeline(input, sendEvent, aiProvider, userTier);

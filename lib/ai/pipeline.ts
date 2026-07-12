@@ -53,6 +53,23 @@ export function extractJSON(text: string): string {
   return text.substring(start, lastEnd + 1);
 }
 
+/**
+ * 파싱된 아웃라인의 구조 검증.
+ * 문법상 유효하지만 구조가 잘못된 JSON이 이후 단계에서 런타임 예외를 내는 것을 방지.
+ */
+export function isValidOutline(o: unknown): o is OutlineData {
+  if (!o || typeof o !== "object") return false;
+  const c = o as Record<string, { summary?: unknown; episodes?: unknown }>;
+  if (typeof (c as { title?: unknown }).title !== "string") return false;
+  return (["act1", "act2", "act3"] as const).every(
+    (k) =>
+      c[k] &&
+      typeof c[k].summary === "string" &&
+      Array.isArray(c[k].episodes) &&
+      (c[k].episodes as unknown[]).length > 0
+  );
+}
+
 function getModelForStage(
   provider: AIProvider,
   tier: Tier,
@@ -118,9 +135,14 @@ export async function runGenerationPipeline(
   tokenUsage.output_tokens += outlineUsage.outputTokens;
 
   try {
-    outline = JSON.parse(extractJSON(outlineText));
+    const parsed = JSON.parse(extractJSON(outlineText));
+    if (!isValidOutline(parsed)) {
+      throw new Error("invalid outline structure");
+    }
+    outline = parsed;
   } catch {
     sendEvent({ stage: "outline", status: "error", error: "아웃라인 파싱 실패" });
+    tokenUsage.cost_estimate = estimateCost(provider, tier, tokenUsage);
     return { outline, characters, firstEpisode, seo, tokenUsage };
   }
   sendEvent({ stage: "outline", status: "completed" });
@@ -162,7 +184,9 @@ export async function runGenerationPipeline(
 
   // --- Stage 3: First Episode ---
   sendEvent({ stage: "first_episode", status: "started" });
-  const episodePrompt = getFirstEpisodePrompt(input, outline!, charText);
+  // 파싱 성공한 캐릭터만 전달 — 파싱 실패 시 깨진 원문 대신 빈 값 (프롬프트가 대체 지침 제공)
+  const charContext = characters ? JSON.stringify(characters) : "";
+  const episodePrompt = getFirstEpisodePrompt(input, outline!, charContext);
   let episodeText = "";
 
   const episodeUsage = await streamAI(
