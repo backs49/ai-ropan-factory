@@ -76,6 +76,8 @@ export interface OutlineData {
     summary: string;
     episodes: EpisodeOutline[];
   };
+  /** 화수가 많은 작품(30화 초과)에서 31화 이후를 10화 단위로 요약한 아크 */
+  arcs?: { range: string; summary: string }[];
 }
 
 export interface EpisodeOutline {

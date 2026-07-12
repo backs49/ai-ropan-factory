@@ -141,7 +141,14 @@ export async function runGenerationPipeline(
     }
     outline = parsed;
   } catch {
-    sendEvent({ stage: "outline", status: "error", error: "아웃라인 파싱 실패" });
+    sendEvent({
+      stage: "outline",
+      status: "error",
+      error:
+        outlineUsage.finishReason === "length"
+          ? "아웃라인 응답이 길이 제한으로 잘렸습니다. 화수를 줄여 다시 시도해주세요."
+          : "아웃라인 파싱 실패",
+    });
     tokenUsage.cost_estimate = estimateCost(provider, tier, tokenUsage);
     return { outline, characters, firstEpisode, seo, tokenUsage };
   }
@@ -157,7 +164,7 @@ export async function runGenerationPipeline(
     {
       system: charPrompt.system,
       user: charPrompt.user,
-      maxTokens: 6000,
+      maxTokens: 8000,
       model: getModelForStage(provider, tier, "characters"),
       expectsJSON: true,
     },
@@ -179,7 +186,14 @@ export async function runGenerationPipeline(
       sendEvent({ stage: "characters", status: "error", error: "캐릭터 배열 추출 실패 (계속 진행)" });
     }
   } catch {
-    sendEvent({ stage: "characters", status: "error", error: "캐릭터 파싱 실패 (계속 진행)" });
+    sendEvent({
+      stage: "characters",
+      status: "error",
+      error:
+        charUsage.finishReason === "length"
+          ? "캐릭터 응답이 길이 제한으로 잘렸습니다 (계속 진행)"
+          : "캐릭터 파싱 실패 (계속 진행)",
+    });
   }
 
   // --- Stage 3: First Episode ---
@@ -204,8 +218,22 @@ export async function runGenerationPipeline(
   );
   tokenUsage.input_tokens += episodeUsage.inputTokens;
   tokenUsage.output_tokens += episodeUsage.outputTokens;
-  firstEpisode = episodeText;
-  sendEvent({ stage: "first_episode", status: "completed" });
+
+  // 잘리거나 비정상적으로 짧은 본문은 실패로 처리 → first_episode가 null이면
+  // 프로젝트 페이지의 누락 단계 재시도(RetryButton) 흐름으로 복구 가능
+  if (episodeUsage.finishReason === "length" || episodeText.trim().length < 1000) {
+    sendEvent({
+      stage: "first_episode",
+      status: "error",
+      error:
+        episodeUsage.finishReason === "length"
+          ? "1화 본문이 길이 제한으로 잘렸습니다. 재시도해주세요."
+          : "1화 본문이 비정상적으로 짧습니다. 재시도해주세요.",
+    });
+  } else {
+    firstEpisode = episodeText;
+    sendEvent({ stage: "first_episode", status: "completed" });
+  }
 
   // --- Stage 4: Meta (SEO + Cover Prompts) ---
   sendEvent({ stage: "meta", status: "started" });

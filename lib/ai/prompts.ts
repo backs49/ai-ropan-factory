@@ -85,10 +85,15 @@ function ageGuide(targetAge: string): string {
   return `타겟 연령(${targetAge}) 독자 기준의 소재와 수위를 지키세요. 과도한 폭력·선정적 묘사는 피하고, 전연령이라면 순한 수위를 유지하세요.`;
 }
 
+// 화수가 많으면 에피소드별 상세 아웃라인이 출력 토큰 한도를 초과하므로,
+// 초반만 상세히 쓰고 이후는 10화 단위 아크 요약으로 받는다 (웹소설 기획 관행과 동일).
+const DETAILED_EPISODE_LIMIT = 30;
+
 export function getOutlinePrompt(input: GenerationInput): {
   system: string;
   user: string;
 } {
+  const useArcs = input.episode_count > DETAILED_EPISODE_LIMIT;
   const variation = input.variation_source
     ? `\n\n[변주 요청] 아래 기존 작품의 "변주"입니다. 같은 키워드·장르를 쓰되 제목, 설정 디테일, 전개 방향은 기존 작품과 뚜렷이 다르게 만드세요.
 - 기존 제목: ${input.variation_source.title}
@@ -107,7 +112,14 @@ export function getOutlinePrompt(input: GenerationInput): {
 - 장르 지침: ${genreGuide(input.genre) || `${input.genre} 장르의 관습과 독자 기대를 충실히 따르세요`}
 - 분위기 지침(${input.mood}): ${moodGuide(input.mood) || "선택된 분위기에 맞는 전개를 유지하세요"}
 - ${ageGuide(input.target_age)}
-- 전체 ${input.episode_count}화 분량으로 설계하고, 1~${input.episode_count}화를 세 막에 빠짐없이 배분하세요 (episode_number 연속, 누락 금지)`,
+- 전체 ${input.episode_count}화 분량으로 설계하세요
+${
+  useArcs
+    ? `- 에피소드별 상세 아웃라인은 1~${DETAILED_EPISODE_LIMIT}화까지만 세 막의 episodes 배열에 작성하세요 (episode_number 연속, 누락 금지)
+- ${DETAILED_EPISODE_LIMIT + 1}화부터 ${input.episode_count}화까지는 최상위 "arcs" 배열에 10화 단위 아크 요약(각 3~4문장)으로 작성하세요
+- 세 막의 summary는 전체 ${input.episode_count}화 기준의 큰 흐름으로 작성하세요`
+    : `- 1~${input.episode_count}화를 세 막에 빠짐없이 배분하세요 (episode_number 연속, 누락 금지)`
+}`,
     user: `장르: ${input.genre}
 키워드: ${input.keywords.join(", ")}
 분위기: ${input.mood}
@@ -150,6 +162,16 @@ export function getOutlinePrompt(input: GenerationInput): {
         "key_event": "핵심 사건 한 줄"
       }
     ]
+  }${
+    useArcs
+      ? `,
+  "arcs": [
+    {
+      "range": "${DETAILED_EPISODE_LIMIT + 1}-${Math.min(DETAILED_EPISODE_LIMIT + 10, input.episode_count)}",
+      "summary": "이 구간의 전개 요약 (3-4문장)"
+    }
+  ]`
+      : ""
   }
 }`,
   };
@@ -267,6 +289,19 @@ export function getNextEpisodePrompt(
   const epOutline = allEpisodes.find((e) => e.episode_number === episodeNumber);
   const isLastEpisode = episodeNumber === totalEpisodes;
 
+  // 상세 아웃라인이 없는 후반 화(30화+)는 해당 구간의 아크 요약을 가이드로 사용
+  const arc = !epOutline
+    ? outline.arcs?.find((a) => {
+        const [start, end] = a.range.split("-").map((n) => parseInt(n, 10));
+        return (
+          Number.isFinite(start) &&
+          Number.isFinite(end) &&
+          episodeNumber >= start &&
+          episodeNumber <= end
+        );
+      })
+    : undefined;
+
   // 지금까지의 전개 요약 (아웃라인 기준) — 장기 연재 시 설정·복선 망각 방지
   const prevRecap = allEpisodes
     .filter((e) => e.episode_number < episodeNumber)
@@ -299,7 +334,10 @@ ${isLastEpisode ? "- 이번 화가 마지막 화입니다. 적절한 결말을 �
 
 ${epOutline ? `${episodeNumber}화 제목: ${epOutline.title}
 ${episodeNumber}화 요약: ${epOutline.summary}
-핵심 사건: ${epOutline.key_event}` : `${episodeNumber}화를 아웃라인의 흐름에 맞춰 작성해주세요.`}
+핵심 사건: ${epOutline.key_event}` : arc ? `이 화는 ${arc.range}화 아크에 속합니다. 아크 전개 방향:
+${arc.summary}
+
+위 아크의 흐름에 맞춰 ${episodeNumber}화의 사건을 구성하세요.` : `${episodeNumber}화를 아웃라인의 흐름에 맞춰 작성해주세요.`}
 
 ${prevRecap ? `지금까지의 전개 (아웃라인 기준):
 ${prevRecap}

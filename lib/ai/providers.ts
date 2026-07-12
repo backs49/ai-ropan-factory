@@ -11,6 +11,8 @@ export interface AIStreamParams {
 export interface AIStreamResult {
   inputTokens: number;
   outputTokens: number;
+  /** 생성 종료 사유 — "length"면 토큰 한도로 잘린 응답 */
+  finishReason: "stop" | "length" | "other";
 }
 
 export async function streamAI(
@@ -56,6 +58,12 @@ async function streamAnthropic(
   return {
     inputTokens: final.usage.input_tokens,
     outputTokens: final.usage.output_tokens,
+    finishReason:
+      final.stop_reason === "end_turn" || final.stop_reason === "stop_sequence"
+        ? "stop"
+        : final.stop_reason === "max_tokens"
+          ? "length"
+          : "other",
   };
 }
 
@@ -81,12 +89,15 @@ async function streamGemini(
   });
 
   let outputText = "";
+  let geminiFinish: string | undefined;
   for await (const chunk of response) {
     const text = chunk.text ?? "";
     if (text) {
       outputText += text;
       onChunk(text);
     }
+    const reason = chunk.candidates?.[0]?.finishReason;
+    if (reason) geminiFinish = String(reason);
   }
 
   // Gemini doesn't provide exact token counts in streaming; estimate
@@ -96,6 +107,8 @@ async function streamGemini(
   return {
     inputTokens: inputEstimate,
     outputTokens: outputEstimate,
+    finishReason:
+      geminiFinish === "STOP" ? "stop" : geminiFinish === "MAX_TOKENS" ? "length" : "other",
   };
 }
 
@@ -124,17 +137,24 @@ async function streamGrok(
 
   let inputTokens = 0;
   let outputTokens = 0;
+  let grokFinish: string | null = null;
 
   for await (const chunk of stream) {
     const text = chunk.choices?.[0]?.delta?.content;
     if (text) {
       onChunk(text);
     }
+    const reason = chunk.choices?.[0]?.finish_reason;
+    if (reason) grokFinish = reason;
     if (chunk.usage) {
       inputTokens = chunk.usage.prompt_tokens ?? 0;
       outputTokens = chunk.usage.completion_tokens ?? 0;
     }
   }
 
-  return { inputTokens, outputTokens };
+  return {
+    inputTokens,
+    outputTokens,
+    finishReason: grokFinish === "stop" ? "stop" : grokFinish === "length" ? "length" : "other",
+  };
 }

@@ -152,7 +152,7 @@ export async function GET(request: Request) {
 
         let episodeText = "";
 
-        await streamAI(
+        const usage = await streamAI(
           provider,
           {
             system: episodePrompt.system,
@@ -169,6 +169,15 @@ export async function GET(request: Request) {
             });
           }
         );
+
+        // 잘리거나 비정상적으로 짧은 본문은 실패 처리 (재시도 흐름으로 복구)
+        if (usage.finishReason === "length" || episodeText.trim().length < 1000) {
+          throw new Error(
+            usage.finishReason === "length"
+              ? "본문이 길이 제한으로 잘렸습니다. 다시 시도해주세요."
+              : "본문이 비정상적으로 짧게 생성됐습니다. 다시 시도해주세요."
+          );
+        }
 
         // 완료 → content + status 업데이트
         await serviceClient

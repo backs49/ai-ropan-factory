@@ -85,12 +85,12 @@ export async function GET(request: Request) {
           const charPrompt = getCharacterPrompt(input, outline);
           charText = "";
 
-          await streamAI(
+          const charUsage = await streamAI(
             provider,
             {
               system: charPrompt.system,
               user: charPrompt.user,
-              maxTokens: 6000,
+              maxTokens: 8000,
               model: getModel(provider, tier, false),
               expectsJSON: true,
             },
@@ -110,7 +110,14 @@ export async function GET(request: Request) {
               sendEvent({ stage: "characters", status: "error", error: "캐릭터 배열 추출 실패" });
             }
           } catch {
-            sendEvent({ stage: "characters", status: "error", error: "캐릭터 파싱 실패" });
+            sendEvent({
+              stage: "characters",
+              status: "error",
+              error:
+                charUsage.finishReason === "length"
+                  ? "캐릭터 응답이 길이 제한으로 잘렸습니다. 다시 시도해주세요."
+                  : "캐릭터 파싱 실패",
+            });
           }
         } else {
           sendEvent({ stage: "characters", status: "completed" });
