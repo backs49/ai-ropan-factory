@@ -166,6 +166,17 @@ npm run build   # 프로덕션 빌드
 npm run lint    # ESLint
 ```
 
+### 5. (선택) 표지 → 영상 모델 비교
+
+표지 이미지를 여러 image-to-video 모델(Grok Imagine Video 1.5 / Lite, Gemini Omni 1.1 Flash)에 넣어 결과 mp4와 비교 페이지를 만듭니다. **실제 API를 호출해 과금**되므로 실행 전에 예상 비용을 확인합니다. Node 22.9 이상이 필요합니다.
+
+```bash
+npm run video:compare -- --images cover1.png,https://.../cover2.png --dry-run   # 요청 본문만 확인 (과금 없음)
+npm run video:compare -- --images cover1.png --duration 6                     # 실행 → scripts/output/video-compare/<시각>/index.html
+```
+
+API 파라미터 이름이 문서와 다르면 `XAI_VIDEO_EXTRA` / `GEMINI_VIDEO_EXTRA`에 JSON을 넣어 요청 본문에 병합할 수 있습니다.
+
 ---
 
 ## 테스트

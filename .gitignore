@@ -45,3 +45,6 @@ next-env.d.ts
 docs/superpowers/
 CLAUDE.md
 AGENTS.md
+
+# 영상 비교 스크립트 결과물
+/scripts/output/

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "video:compare": "node --env-file-if-exists=.env.local scripts/video-compare.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.81.0",
