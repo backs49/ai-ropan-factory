@@ -14,7 +14,7 @@ function modelFromEnv(key: string, fallback: string): string {
 export const AI_MODELS: Record<AIProvider, AIModelConfig> = {
   gemini: {
     light: modelFromEnv("AI_MODEL_GEMINI_LIGHT", "gemini-3.8-flash"),
-    heavy: modelFromEnv("AI_MODEL_GEMINI_HEAVY", "gemini-3.1-pro-preview"),
+    heavy: modelFromEnv("AI_MODEL_GEMINI_HEAVY", "gemini-4-argon"),
   },
   grok: {
     // Grok 4.7 Fast는 공개 API에 없어 경량/상위 모두 grok-4.7 사용
@@ -29,7 +29,7 @@ export const AI_MODELS: Record<AIProvider, AIModelConfig> = {
 };
 
 export const AI_PROVIDER_OPTIONS: { value: AIProvider; label: string; freeModel: string; proModel: string }[] = [
-  { value: "gemini", label: "Gemini (Google)", freeModel: "Gemini 3.8 Flash / 3.1 Pro", proModel: "Gemini 3.1 Pro" },
+  { value: "gemini", label: "Gemini (Google)", freeModel: "Gemini 3.8 Flash / 4 Argon", proModel: "Gemini 4 Argon" },
   { value: "grok", label: "Grok (xAI)", freeModel: "Grok 4.7", proModel: "Grok 4.7" },
   { value: "anthropic", label: "Claude (Anthropic)", freeModel: "Haiku 5.5 / Sonnet 5.5", proModel: "Sonnet 5.5" },
 ];

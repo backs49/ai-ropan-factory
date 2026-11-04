@@ -270,8 +270,8 @@ function estimateCost(provider: AIProvider, tier: Tier, usage: TokenUsage): numb
   // Pro uses heavy model pricing, Free uses approximate blend
   const rates: Record<AIProvider, { free: { input: number; output: number }; pro: { input: number; output: number } }> = {
     gemini: {
-      free: { input: 1, output: 5 },         // blended 3.8 Flash ($0.75/$3.75) + 3.1 Pro
-      pro: { input: 1.25, output: 10 },      // Gemini 3.1 Pro
+      free: { input: 1.5, output: 7 },       // blended 3.8 Flash ($0.75/$3.75) + 4 Argon
+      pro: { input: 4, output: 20 },         // Gemini 4 Argon (2026-12-01 인상 후 단가 기준)
     },
     grok: {
       free: { input: 2, output: 6 },         // Grok 4.7 (경량/상위 동일)
