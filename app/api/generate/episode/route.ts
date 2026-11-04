@@ -1,5 +1,5 @@
 import { createServiceClient, createClient } from "@/lib/supabase/server";
-import { streamAI } from "@/lib/ai/providers";
+import { streamAI, MAX_TOKENS, episodeFailureMessage } from "@/lib/ai/providers";
 import { sseErrorResponse } from "@/lib/sse";
 import { getNextEpisodePrompt } from "@/lib/ai/prompts";
 import type {
@@ -183,7 +183,7 @@ export async function GET(request: Request) {
           {
             system: episodePrompt.system,
             user: episodePrompt.user,
-            maxTokens: 8000,
+            maxTokens: MAX_TOKENS.episode,
             model,
           },
           (text) => {
@@ -197,13 +197,8 @@ export async function GET(request: Request) {
         );
 
         // 잘리거나 비정상적으로 짧은 본문은 실패 처리 (재시도 흐름으로 복구)
-        if (usage.finishReason === "length" || episodeText.trim().length < 1000) {
-          throw new Error(
-            usage.finishReason === "length"
-              ? "본문이 길이 제한으로 잘렸습니다. 다시 시도해주세요."
-              : "본문이 비정상적으로 짧게 생성됐습니다. 다시 시도해주세요."
-          );
-        }
+        const failure = episodeFailureMessage(usage, episodeText);
+        if (failure) throw new Error(failure);
 
         // 완료 → content + status 업데이트
         await serviceClient

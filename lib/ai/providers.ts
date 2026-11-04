@@ -11,8 +11,32 @@ export interface AIStreamParams {
 export interface AIStreamResult {
   inputTokens: number;
   outputTokens: number;
-  /** 생성 종료 사유 — "length"면 토큰 한도로 잘린 응답 */
-  finishReason: "stop" | "length" | "other";
+  /** 생성 종료 사유 — "length"면 토큰 한도로 잘린 응답, "refusal"이면 모델이 안전 정책으로 거절 */
+  finishReason: "stop" | "length" | "refusal" | "other";
+}
+
+/**
+ * 출력 토큰 한도. 현재 모델들은 사고(추론) 토큰도 이 한도에서 소모하므로 본문 길이보다 넉넉히 잡는다.
+ * 실제 과금은 생성된 토큰만큼이라 한도를 올려도 비용은 늘지 않는다.
+ */
+export const MAX_TOKENS = {
+  json: 16000, // 아웃라인·캐릭터
+  episode: 16000, // 본문 3,000~5,000자
+  meta: 6000,
+} as const;
+
+/** 잘림·거절·짧은 본문을 사용자 메시지로 변환. 정상이면 null */
+export function episodeFailureMessage(result: AIStreamResult, text: string): string | null {
+  if (result.finishReason === "refusal") {
+    return "AI가 안전 정책에 따라 생성을 거절했습니다. 키워드나 분위기를 바꿔 다시 시도해주세요.";
+  }
+  if (result.finishReason === "length") {
+    return "본문이 길이 제한으로 잘렸습니다. 다시 시도해주세요.";
+  }
+  if (text.trim().length < 1000) {
+    return "본문이 비정상적으로 짧게 생성됐습니다. 다시 시도해주세요.";
+  }
+  return null;
 }
 
 export async function streamAI(
@@ -46,6 +70,14 @@ async function streamAnthropic(
     ...(params.model.startsWith("claude-haiku-5")
       ? { thinking: { type: "disabled" as const } }
       : {}),
+    // Sonnet 5.5는 thinking을 끌 수 없고(disabled는 400) 기본 effort가 high —
+    // 소설 생성은 깊은 추론보다 속도가 중요하고 maxDuration(300초) 안에 끝나야 하므로 medium으로 낮춘다
+    ...(params.model.startsWith("claude-sonnet-5")
+      ? {
+          thinking: { type: "adaptive" as const },
+          output_config: { effort: "medium" as const },
+        }
+      : {}),
     system: params.system,
     messages: [{ role: "user", content: params.user }],
   });
@@ -68,7 +100,9 @@ async function streamAnthropic(
         ? "stop"
         : final.stop_reason === "max_tokens"
           ? "length"
-          : "other",
+          : final.stop_reason === "refusal"
+            ? "refusal"
+            : "other",
   };
 }
 
@@ -77,7 +111,9 @@ async function streamGemini(
   params: AIStreamParams,
   onChunk: (text: string) => void
 ): Promise<AIStreamResult> {
-  const { GoogleGenAI } = await import("@google/genai");
+  const { GoogleGenAI, ThinkingLevel } = await import("@google/genai");
+  // Gemini 3.x Flash는 thinking이 기본으로 켜져 출력 한도를 소모 — 경량 단계는 LOW로 제한
+  const isGemini3Flash = params.model.startsWith("gemini-3") && params.model.includes("flash");
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
   const response = await ai.models.generateContentStream({
@@ -89,7 +125,10 @@ async function streamGemini(
       ...(params.expectsJSON
         ? { responseMimeType: "application/json" }
         : { responseModalities: ["TEXT"] }),
-      thinkingConfig: { includeThoughts: false },
+      thinkingConfig: {
+        includeThoughts: false,
+        ...(isGemini3Flash ? { thinkingLevel: ThinkingLevel.LOW } : {}),
+      },
     },
   });
 
@@ -113,7 +152,13 @@ async function streamGemini(
     inputTokens: inputEstimate,
     outputTokens: outputEstimate,
     finishReason:
-      geminiFinish === "STOP" ? "stop" : geminiFinish === "MAX_TOKENS" ? "length" : "other",
+      geminiFinish === "STOP"
+        ? "stop"
+        : geminiFinish === "MAX_TOKENS"
+          ? "length"
+          : geminiFinish === "SAFETY" || geminiFinish === "PROHIBITED_CONTENT"
+            ? "refusal"
+            : "other",
   };
 }
 
@@ -160,6 +205,13 @@ async function streamGrok(
   return {
     inputTokens,
     outputTokens,
-    finishReason: grokFinish === "stop" ? "stop" : grokFinish === "length" ? "length" : "other",
+    finishReason:
+      grokFinish === "stop"
+        ? "stop"
+        : grokFinish === "length"
+          ? "length"
+          : grokFinish === "content_filter"
+            ? "refusal"
+            : "other",
   };
 }

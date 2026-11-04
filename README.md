@@ -83,9 +83,9 @@ Supabase 저장 (projects / episodes) + 토큰 사용량·비용 추정 기록
 | 분류 | 기술 |
 |------|------|
 | 프레임워크 | Next.js 16 (App Router, Turbopack), React 19, TypeScript 5 |
-| AI — Anthropic | `@anthropic-ai/sdk` — Claude Haiku 5.5 (경량) / Sonnet 4.6 (상위) |
-| AI — Google | `@google/genai` — Gemini 2.5 Flash (경량) / Gemini 3.1 Pro (상위), `gemini-2.5-flash-image` (표지) |
-| AI — xAI | `openai` SDK + `api.x.ai` baseURL — Grok 4.1 Fast (경량) / Grok 4.20 (상위) |
+| AI — Anthropic | `@anthropic-ai/sdk` — Claude Haiku 5.5 (경량) / Sonnet 5.5 (상위) |
+| AI — Google | `@google/genai` — Gemini 3.8 Flash (경량) / Gemini 3.1 Pro (상위), `gemini-2.5-flash-image` (표지) |
+| AI — xAI | `openai` SDK + `api.x.ai` baseURL — Grok 4.7 (경량·상위 공통) |
 | DB / 인증 / 스토리지 | Supabase (PostgreSQL + RLS, Auth, Storage) — `@supabase/ssr`, `@supabase/supabase-js` |
 | 결제 | 토스페이먼츠 빌링키 API (v2 standard, CDN 스크립트 동적 로드) |
 | UI | Tailwind CSS v4, shadcn/ui (Base UI 변형), lucide-react, sonner, next-themes |

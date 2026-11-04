@@ -13,25 +13,25 @@ function modelFromEnv(key: string, fallback: string): string {
 
 export const AI_MODELS: Record<AIProvider, AIModelConfig> = {
   gemini: {
-    light: modelFromEnv("AI_MODEL_GEMINI_LIGHT", "gemini-2.5-flash"),
+    light: modelFromEnv("AI_MODEL_GEMINI_LIGHT", "gemini-3.8-flash"),
     heavy: modelFromEnv("AI_MODEL_GEMINI_HEAVY", "gemini-3.1-pro-preview"),
   },
   grok: {
-    // grok-4-1-fast-non-reasoning은 2026-05-15 은퇴 후 grok-4.3(추론 없음)으로 자동 리다이렉트됨
-    light: modelFromEnv("AI_MODEL_GROK_LIGHT", "grok-4-1-fast-non-reasoning"),
-    heavy: modelFromEnv("AI_MODEL_GROK_HEAVY", "grok-4.20-0309-reasoning"),
+    // Grok 4.7 Fast는 공개 API에 없어 경량/상위 모두 grok-4.7 사용
+    light: modelFromEnv("AI_MODEL_GROK_LIGHT", "grok-4.7"),
+    heavy: modelFromEnv("AI_MODEL_GROK_HEAVY", "grok-4.7"),
   },
   anthropic: {
     // claude-sonnet-4-20250514는 2026-06-15 은퇴 → Haiku 5.5로 교체
     light: modelFromEnv("AI_MODEL_ANTHROPIC_LIGHT", "claude-haiku-5-5"),
-    heavy: modelFromEnv("AI_MODEL_ANTHROPIC_HEAVY", "claude-sonnet-4-6"),
+    heavy: modelFromEnv("AI_MODEL_ANTHROPIC_HEAVY", "claude-sonnet-5-5"),
   },
 };
 
 export const AI_PROVIDER_OPTIONS: { value: AIProvider; label: string; freeModel: string; proModel: string }[] = [
-  { value: "gemini", label: "Gemini (Google)", freeModel: "Gemini 2.5 Flash / 3.1 Pro", proModel: "Gemini 3.1 Pro" },
-  { value: "grok", label: "Grok (xAI)", freeModel: "Grok 4.1 Fast / 4.20", proModel: "Grok 4.20" },
-  { value: "anthropic", label: "Claude (Anthropic)", freeModel: "Haiku 5.5 / Sonnet 4.6", proModel: "Sonnet 4.6" },
+  { value: "gemini", label: "Gemini (Google)", freeModel: "Gemini 3.8 Flash / 3.1 Pro", proModel: "Gemini 3.1 Pro" },
+  { value: "grok", label: "Grok (xAI)", freeModel: "Grok 4.7", proModel: "Grok 4.7" },
+  { value: "anthropic", label: "Claude (Anthropic)", freeModel: "Haiku 5.5 / Sonnet 5.5", proModel: "Sonnet 5.5" },
 ];
 
 export type Tier = "free" | "pro" | "enterprise";

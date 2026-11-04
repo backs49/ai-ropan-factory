@@ -1,5 +1,5 @@
 import { createServiceClient, createClient } from "@/lib/supabase/server";
-import { streamAI } from "@/lib/ai/providers";
+import { streamAI, MAX_TOKENS, episodeFailureMessage } from "@/lib/ai/providers";
 import { sseErrorResponse } from "@/lib/sse";
 import { extractJSON } from "@/lib/ai/pipeline";
 import {
@@ -109,7 +109,7 @@ export async function GET(request: Request) {
             {
               system: charPrompt.system,
               user: charPrompt.user,
-              maxTokens: 8000,
+              maxTokens: MAX_TOKENS.json,
               model: getModel(provider, tier, false),
               expectsJSON: true,
             },
@@ -148,12 +148,12 @@ export async function GET(request: Request) {
           const episodePrompt = getFirstEpisodePrompt(input, outline, charText);
           let episodeText = "";
 
-          await streamAI(
+          const episodeUsage = await streamAI(
             provider,
             {
               system: episodePrompt.system,
               user: episodePrompt.user,
-              maxTokens: 8000,
+              maxTokens: MAX_TOKENS.episode,
               model: getModel(provider, tier, true),
             },
             (text) => {
@@ -162,8 +162,14 @@ export async function GET(request: Request) {
             }
           );
 
-          updates.first_episode = episodeText;
-          sendEvent({ stage: "first_episode", status: "completed" });
+          // 잘리거나 거절·비정상적으로 짧은 본문은 저장하지 않음 (다시 재시도 가능)
+          const episodeError = episodeFailureMessage(episodeUsage, episodeText);
+          if (episodeError) {
+            sendEvent({ stage: "first_episode", status: "error", error: episodeError });
+          } else {
+            updates.first_episode = episodeText;
+            sendEvent({ stage: "first_episode", status: "completed" });
+          }
         } else {
           sendEvent({ stage: "first_episode", status: "completed" });
         }
@@ -179,7 +185,7 @@ export async function GET(request: Request) {
             {
               system: metaPrompt.system,
               user: metaPrompt.user,
-              maxTokens: 3000,
+              maxTokens: MAX_TOKENS.meta,
               model: getModel(provider, tier, false),
               expectsJSON: true,
             },
