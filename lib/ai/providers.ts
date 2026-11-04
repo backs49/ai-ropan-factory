@@ -72,7 +72,8 @@ async function streamAnthropic(
       : {}),
     // Sonnet 5.5는 thinking을 끌 수 없고(disabled는 400) 기본 effort가 high —
     // 소설 생성은 깊은 추론보다 속도가 중요하고 maxDuration(300초) 안에 끝나야 하므로 medium으로 낮춘다
-    ...(params.model.startsWith("claude-sonnet-5")
+    // Opus 5.5도 thinking을 끌 수 없음 — 기본 effort가 medium이지만 명시해 둔다 (Pro 1화 전용)
+    ...(params.model.startsWith("claude-sonnet-5") || params.model.startsWith("claude-opus-5")
       ? {
           thinking: { type: "adaptive" as const },
           output_config: { effort: "medium" as const },

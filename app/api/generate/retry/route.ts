@@ -1,23 +1,17 @@
 import { createServiceClient, createClient } from "@/lib/supabase/server";
 import { streamAI, MAX_TOKENS, episodeFailureMessage } from "@/lib/ai/providers";
 import { sseErrorResponse } from "@/lib/sse";
-import { extractJSON } from "@/lib/ai/pipeline";
+import { extractJSON, getModelForStage } from "@/lib/ai/pipeline";
 import {
   getCharacterPrompt,
   getFirstEpisodePrompt,
   getMetaPrompt,
 } from "@/lib/ai/prompts";
 import type { AIProvider, Tier, GenerationInput, OutlineData, StreamEvent } from "@/types";
-import { AI_MODELS, PROJECT_RETRY_LIMIT } from "@/types";
+import { PROJECT_RETRY_LIMIT } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-function getModel(provider: AIProvider, tier: Tier, isHeavy: boolean): string {
-  const models = AI_MODELS[provider];
-  if (tier === "pro" || tier === "enterprise") return models.heavy;
-  return isHeavy ? models.heavy : models.light;
-}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -110,7 +104,7 @@ export async function GET(request: Request) {
               system: charPrompt.system,
               user: charPrompt.user,
               maxTokens: MAX_TOKENS.json,
-              model: getModel(provider, tier, false),
+              model: getModelForStage(provider, tier, "characters"),
               expectsJSON: true,
             },
             (text) => {
@@ -154,7 +148,7 @@ export async function GET(request: Request) {
               system: episodePrompt.system,
               user: episodePrompt.user,
               maxTokens: MAX_TOKENS.episode,
-              model: getModel(provider, tier, true),
+              model: getModelForStage(provider, tier, "first_episode"),
             },
             (text) => {
               episodeText += text;
@@ -186,7 +180,7 @@ export async function GET(request: Request) {
               system: metaPrompt.system,
               user: metaPrompt.user,
               maxTokens: MAX_TOKENS.meta,
-              model: getModel(provider, tier, false),
+              model: getModelForStage(provider, tier, "meta"),
               expectsJSON: true,
             },
             (text) => {

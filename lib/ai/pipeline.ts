@@ -70,15 +70,16 @@ export function isValidOutline(o: unknown): o is OutlineData {
   );
 }
 
-function getModelForStage(
+export function getModelForStage(
   provider: AIProvider,
   tier: Tier,
   stage: GenerationStage
 ): string {
   const models = AI_MODELS[provider];
 
-  // Pro: 모든 단계에 최신 모델
+  // Pro: 모든 단계에 상위 모델, 1화는 최상위 모델이 있으면 그 모델 (Claude: Opus 5.5)
   if (tier === "pro" || tier === "enterprise") {
+    if (stage === "first_episode" && models.premium) return models.premium;
     return models.heavy;
   }
 
@@ -279,7 +280,7 @@ function estimateCost(provider: AIProvider, tier: Tier, usage: TokenUsage): numb
     },
     anthropic: {
       free: { input: 0.7, output: 3.5 },     // blended Haiku 5.5 ($0.10/$0.50) + Sonnet 5.5
-      pro: { input: 2, output: 10 },         // Sonnet 5.5
+      pro: { input: 2.5, output: 12.5 },     // Sonnet 5.5 + 1화 Opus 5.5 ($4/$20) 혼합
     },
   };
   const r = tier === "pro" || tier === "enterprise" ? rates[provider].pro : rates[provider].free;

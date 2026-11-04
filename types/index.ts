@@ -3,6 +3,8 @@ export type AIProvider = "anthropic" | "gemini" | "grok";
 export interface AIModelConfig {
   light: string;  // Free 티어: 아웃라인/캐릭터/메타용
   heavy: string;  // Free 티어: 1화 완성본용 & Pro 티어: 전체
+  /** Pro 티어 1화 전용 최상위 모델 (선택). 독자의 첫인상을 결정하는 화에만 원가를 더 쓴다 */
+  premium?: string;
 }
 
 // 모델 ID는 환경변수로 덮어쓸 수 있다 (예: AI_MODEL_GROK_LIGHT). 모델 은퇴 시 재배포 없이 교체 가능.
@@ -25,13 +27,14 @@ export const AI_MODELS: Record<AIProvider, AIModelConfig> = {
     // claude-sonnet-4-20250514는 2026-06-15 은퇴 → Haiku 5.5로 교체
     light: modelFromEnv("AI_MODEL_ANTHROPIC_LIGHT", "claude-haiku-5-5"),
     heavy: modelFromEnv("AI_MODEL_ANTHROPIC_HEAVY", "claude-sonnet-5-5"),
+    premium: modelFromEnv("AI_MODEL_ANTHROPIC_PREMIUM", "claude-opus-5-5"),
   },
 };
 
 export const AI_PROVIDER_OPTIONS: { value: AIProvider; label: string; freeModel: string; proModel: string }[] = [
   { value: "gemini", label: "Gemini (Google)", freeModel: "Gemini 3.8 Flash / 4 Argon", proModel: "Gemini 4 Argon" },
   { value: "grok", label: "Grok (xAI)", freeModel: "Grok 4.7", proModel: "Grok 4.7" },
-  { value: "anthropic", label: "Claude (Anthropic)", freeModel: "Haiku 5.5 / Sonnet 5.5", proModel: "Sonnet 5.5" },
+  { value: "anthropic", label: "Claude (Anthropic)", freeModel: "Haiku 5.5 / Sonnet 5.5", proModel: "Sonnet 5.5 (1화는 Opus 5.5)" },
 ];
 
 export type Tier = "free" | "pro" | "enterprise";

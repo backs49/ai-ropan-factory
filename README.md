@@ -19,7 +19,7 @@ Next.js 16 App Router + Supabase + 멀티 AI 프로바이더(Claude / Gemini / G
 ### 멀티 AI 프로바이더
 - 사용자가 설정에서 **Claude(Anthropic) / Gemini(Google) / Grok(xAI)** 중 선택
 - `streamAI()` 단일 인터페이스로 3사 SDK의 서로 다른 스트리밍 방식을 통합 (`lib/ai/providers.ts`)
-- **티어 기반 모델 라우팅** — Free는 아웃라인/캐릭터/메타에 경량 모델, 1화에만 상위 모델. Pro는 전 단계 상위 모델
+- **티어 기반 모델 라우팅** — Free는 아웃라인/캐릭터/메타에 경량 모델, 1화에만 상위 모델. Pro는 전 단계 상위 모델 (Claude는 Pro 1화에만 최상위 Opus 5.5)
 - 프로바이더별 JSON 응답 모드(`expectsJSON`) 지원 + 코드블록/설명 텍스트에 감싸인 JSON을 안전하게 파싱하는 `extractJSON()`
 
 ### 실시간 스트리밍 UX
@@ -83,7 +83,7 @@ Supabase 저장 (projects / episodes) + 토큰 사용량·비용 추정 기록
 | 분류 | 기술 |
 |------|------|
 | 프레임워크 | Next.js 16 (App Router, Turbopack), React 19, TypeScript 5 |
-| AI — Anthropic | `@anthropic-ai/sdk` — Claude Haiku 5.5 (경량) / Sonnet 5.5 (상위) |
+| AI — Anthropic | `@anthropic-ai/sdk` — Claude Haiku 5.5 (경량) / Sonnet 5.5 (상위) / Opus 5.5 (Pro 1화 전용) |
 | AI — Google | `@google/genai` — Gemini 3.8 Flash (경량) / Gemini 4 Argon (상위), `gemini-2.5-flash-image` (표지) |
 | AI — xAI | `openai` SDK + `api.x.ai` baseURL — Grok 4.7 (경량·상위 공통) |
 | DB / 인증 / 스토리지 | Supabase (PostgreSQL + RLS, Auth, Storage) — `@supabase/ssr`, `@supabase/supabase-js` |
