@@ -1,5 +1,6 @@
 import { createServiceClient, createClient } from "@/lib/supabase/server";
 import { streamAI } from "@/lib/ai/providers";
+import { sseErrorResponse } from "@/lib/sse";
 import { extractJSON } from "@/lib/ai/pipeline";
 import {
   getCharacterPrompt,
@@ -7,7 +8,7 @@ import {
   getMetaPrompt,
 } from "@/lib/ai/prompts";
 import type { AIProvider, Tier, GenerationInput, OutlineData, StreamEvent } from "@/types";
-import { AI_MODELS } from "@/types";
+import { AI_MODELS, PROJECT_RETRY_LIMIT } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -59,6 +60,24 @@ export async function GET(request: Request) {
   const provider = (profile?.ai_provider as AIProvider) || "gemini";
   const tier = (profile?.tier as Tier) || "free";
   const serviceClient = await createServiceClient();
+
+  // 재시도 클레임: 동시 실행 차단 + 프로젝트당 횟수 제한 (쿼터를 쓰지 않는 경로라 상한 필수)
+  const { data: claimed, error: claimError } = await serviceClient.rpc(
+    "claim_project_retry",
+    { p_project_id: projectId, p_user_id: user.id, p_max: PROJECT_RETRY_LIMIT }
+  );
+  if (claimError) {
+    console.error(`[retry] 클레임 RPC 오류 project=${projectId}`, claimError);
+    return new Response("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", { status: 500 });
+  }
+  if (!claimed) {
+    return sseErrorResponse(
+      (project.retry_count ?? 0) >= PROJECT_RETRY_LIMIT
+        ? `재시도는 프로젝트당 ${PROJECT_RETRY_LIMIT}회까지 가능합니다.`
+        : "이미 재시도가 진행 중이거나 재시도할 수 없는 상태입니다.",
+      "outline"
+    );
+  }
 
   const input: GenerationInput = {
     genre: project.genre,
@@ -199,6 +218,11 @@ export async function GET(request: Request) {
         const message = error instanceof Error ? error.message : "Unknown error";
         sendEvent({ stage: "outline", status: "error", error: message });
       } finally {
+        // 진행 중 마커 해제 (횟수는 유지)
+        await serviceClient
+          .from("projects")
+          .update({ retry_started_at: null })
+          .eq("id", projectId);
         controller.close();
       }
     },

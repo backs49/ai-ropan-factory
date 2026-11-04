@@ -19,11 +19,20 @@ export function RetryButton({ projectId }: { projectId: string }) {
       const eventSource = new EventSource(`/api/generate/retry?projectId=${projectId}`);
 
       eventSource.onmessage = (event) => {
-        let data: { content?: string };
+        let data: { content?: string; status?: string; stage?: string; error?: string };
         try {
           data = JSON.parse(event.data);
         } catch {
           return; // 손상된 프레임 무시
+        }
+        // 요청 자체가 거절된 경우(재시도 한도 초과·진행 중) — 서버가 error 이벤트 하나만 보내고 닫음
+        if (data.status === "error" && data.stage === "outline") {
+          doneRef.current = true;
+          eventSource.close();
+          toast.error(data.error || "재시도에 실패했습니다.");
+          router.refresh();
+          setRetrying(false);
+          return;
         }
         if (data.content === "ALL_DONE") {
           doneRef.current = true;

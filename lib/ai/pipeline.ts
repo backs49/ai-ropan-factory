@@ -282,7 +282,7 @@ function estimateCost(provider: AIProvider, tier: Tier, usage: TokenUsage): numb
       pro: { input: 2, output: 6 },           // Grok 4.20
     },
     anthropic: {
-      free: { input: 3, output: 15 },         // blended Sonnet 4 + 4.6
+      free: { input: 1, output: 5 },          // blended Haiku 5.5 + Sonnet 4.6
       pro: { input: 3, output: 15 },          // Sonnet 4.6
     },
   };

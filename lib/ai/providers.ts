@@ -41,6 +41,11 @@ async function streamAnthropic(
   const stream = client.messages.stream({
     model: params.model,
     max_tokens: params.maxTokens,
+    // Haiku 5.5는 thinking이 기본으로 켜져 max_tokens를 소모하므로 명시적으로 끈다
+    // (disabled는 effort high 이하에서 허용 — 기본 effort는 medium)
+    ...(params.model.startsWith("claude-haiku-5")
+      ? { thinking: { type: "disabled" as const } }
+      : {}),
     system: params.system,
     messages: [{ role: "user", content: params.user }],
   });

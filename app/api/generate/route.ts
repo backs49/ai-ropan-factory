@@ -52,7 +52,8 @@ export async function GET(request: Request) {
   const serviceClient = await createServiceClient();
 
   // 원자적 시작 클레임 — 새로고침/동시 요청으로 인한 중복 파이프라인·중복 쿼터 소비 차단
-  const { data: claimed, error: claimError } = await supabase
+  // 상태 컬럼은 service role만 쓸 수 있다 (009) — 소유권은 user_id 조건으로 보장
+  const { data: claimed, error: claimError } = await serviceClient
     .from("projects")
     .update({ generation_started_at: new Date().toISOString() })
     .eq("id", projectId)
