@@ -1,13 +1,15 @@
 import { createServiceClient, createClient } from "@/lib/supabase/server";
-import { streamAI } from "@/lib/ai/providers";
+import { streamAI, MAX_TOKENS, episodeFailureMessage } from "@/lib/ai/providers";
+import { sseErrorResponse } from "@/lib/sse";
 import { getNextEpisodePrompt } from "@/lib/ai/prompts";
 import type {
   AIProvider,
+  Tier,
   GenerationInput,
   OutlineData,
   StreamEvent,
 } from "@/types";
-import { AI_MODELS } from "@/types";
+import { AI_MODELS, EPISODE_MONTHLY_LIMIT, EPISODE_RETRY_LIMIT } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -61,6 +63,7 @@ export async function GET(request: Request) {
     .single();
 
   const provider = (profile?.ai_provider as AIProvider) || "gemini";
+  const tier = (profile?.tier as Tier) || "free";
 
   // 직전 에피소드 조회
   const { data: prevEpisodeData } = await supabase
@@ -89,11 +92,36 @@ export async function GET(request: Request) {
 
   const serviceClient = await createServiceClient();
 
-  // status를 generating으로 변경
-  await serviceClient
-    .from("episodes")
-    .update({ status: "generating", content: "" })
-    .eq("id", episodeId);
+  // 월간 에피소드 쿼터 선소비 (실패 시 환불) — 재생성도 원가가 드는 상위 모델 호출
+  const { data: consumed, error: consumeError } = await serviceClient.rpc(
+    "consume_episode_generation",
+    { p_user_id: user.id, p_limit: EPISODE_MONTHLY_LIMIT[tier] }
+  );
+  if (consumeError) {
+    console.error(`[episode-retry] 쿼터 RPC 오류 user=${user.id}`, consumeError);
+    return new Response("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", { status: 500 });
+  }
+  if (!consumed) {
+    return sseErrorResponse(`이번 달 에피소드 생성 한도(${EPISODE_MONTHLY_LIMIT[tier]}화)를 모두 사용했습니다.`);
+  }
+
+  // failed → generating 원자 전환 + 재생성 횟수 제한 (동시 요청 중복 실행 차단)
+  const { data: claimed, error: claimError } = await serviceClient.rpc(
+    "claim_episode_retry",
+    { p_episode_id: episodeId, p_max: EPISODE_RETRY_LIMIT }
+  );
+  if (claimError || !claimed) {
+    await serviceClient.rpc("refund_episode_generation", { p_user_id: user.id });
+    if (claimError) {
+      console.error(`[episode-retry] 클레임 RPC 오류 episode=${episodeId}`, claimError);
+      return new Response("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", { status: 500 });
+    }
+    return sseErrorResponse(
+      (episode.retry_count ?? 0) >= EPISODE_RETRY_LIMIT
+        ? `재생성은 화당 ${EPISODE_RETRY_LIMIT}회까지 가능합니다.`
+        : "이미 재생성이 진행 중입니다."
+    );
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -123,7 +151,7 @@ export async function GET(request: Request) {
           {
             system: episodePrompt.system,
             user: episodePrompt.user,
-            maxTokens: 8000,
+            maxTokens: MAX_TOKENS.episode,
             model,
           },
           (text) => {
@@ -137,13 +165,8 @@ export async function GET(request: Request) {
         );
 
         // 잘리거나 비정상적으로 짧은 본문은 실패 처리
-        if (usage.finishReason === "length" || episodeText.trim().length < 1000) {
-          throw new Error(
-            usage.finishReason === "length"
-              ? "본문이 길이 제한으로 잘렸습니다. 다시 시도해주세요."
-              : "본문이 비정상적으로 짧게 생성됐습니다. 다시 시도해주세요."
-          );
-        }
+        const failure = episodeFailureMessage(usage, episodeText);
+        if (failure) throw new Error(failure);
 
         await serviceClient
           .from("episodes")
@@ -164,6 +187,7 @@ export async function GET(request: Request) {
           .from("episodes")
           .update({ status: "failed" })
           .eq("id", episodeId);
+        await serviceClient.rpc("refund_episode_generation", { p_user_id: user.id });
 
         sendEvent({
           stage: "first_episode",

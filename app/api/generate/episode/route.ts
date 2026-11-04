@@ -1,5 +1,6 @@
 import { createServiceClient, createClient } from "@/lib/supabase/server";
-import { streamAI } from "@/lib/ai/providers";
+import { streamAI, MAX_TOKENS, episodeFailureMessage } from "@/lib/ai/providers";
+import { sseErrorResponse } from "@/lib/sse";
 import { getNextEpisodePrompt } from "@/lib/ai/prompts";
 import type {
   AIProvider,
@@ -8,12 +9,10 @@ import type {
   OutlineData,
   StreamEvent,
 } from "@/types";
-import { AI_MODELS } from "@/types";
+import { AI_MODELS, EPISODE_MONTHLY_LIMIT, FREE_EPISODE_LIMIT } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-const FREE_EPISODE_LIMIT = 3;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -71,12 +70,21 @@ export async function GET(request: Request) {
   );
   const nextNumber = maxEpisodeNumber + 1;
 
+  // 실패/진행 중인 화가 있으면 다음 화로 넘어가지 않음 — 화 번호 누락·동시 생성 방지
+  const blocking = currentEpisodes.find(
+    (ep) => ep.status === "failed" || ep.status === "generating"
+  );
+  if (blocking) {
+    return sseErrorResponse(
+      blocking.status === "failed"
+        ? `${blocking.episode_number}화 생성에 실패했습니다. 먼저 재생성해주세요.`
+        : `${blocking.episode_number}화를 생성 중입니다. 잠시 후 다시 시도해주세요.`
+    );
+  }
+
   // 무료 제한 체크
   if (tier === "free" && currentEpisodes.length >= FREE_EPISODE_LIMIT) {
-    return new Response(
-      `무료 플랜에서는 프로젝트당 ${FREE_EPISODE_LIMIT}화까지 생성 가능합니다. Pro로 업그레이드하세요.`,
-      { status: 403 }
-    );
+    return sseErrorResponse(`무료 플랜에서는 프로젝트당 ${FREE_EPISODE_LIMIT}화까지 생성 가능합니다. Pro로 업그레이드하세요.`);
   }
 
   // episode_count 초과 확인
@@ -101,6 +109,19 @@ export async function GET(request: Request) {
 
   const serviceClient = await createServiceClient();
 
+  // 월간 에피소드 쿼터 원자적 선소비 (실패 시 환불) — Pro 무제한 생성에 의한 원가 폭주 방지
+  const { data: consumed, error: consumeError } = await serviceClient.rpc(
+    "consume_episode_generation",
+    { p_user_id: user.id, p_limit: EPISODE_MONTHLY_LIMIT[tier] }
+  );
+  if (consumeError) {
+    console.error(`[episode] 쿼터 RPC 오류 user=${user.id}`, consumeError);
+    return new Response("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", { status: 500 });
+  }
+  if (!consumed) {
+    return sseErrorResponse(`이번 달 에피소드 생성 한도(${EPISODE_MONTHLY_LIMIT[tier]}화)를 모두 사용했습니다.`);
+  }
+
   // episodes row 삽입 (generating)
   const { data: newEpisode, error: insertError } = await serviceClient
     .from("episodes")
@@ -114,6 +135,11 @@ export async function GET(request: Request) {
     .single();
 
   if (insertError) {
+    await serviceClient.rpc("refund_episode_generation", { p_user_id: user.id });
+    // 동시 요청이 같은 화 번호를 먼저 삽입한 경우 (unique 위반)
+    if (insertError.code === "23505") {
+      return sseErrorResponse("이미 생성 중인 화입니다. 잠시 후 다시 시도해주세요.");
+    }
     return new Response(`에피소드 생성 실패: ${insertError.message}`, {
       status: 500,
     });
@@ -157,7 +183,7 @@ export async function GET(request: Request) {
           {
             system: episodePrompt.system,
             user: episodePrompt.user,
-            maxTokens: 8000,
+            maxTokens: MAX_TOKENS.episode,
             model,
           },
           (text) => {
@@ -171,13 +197,8 @@ export async function GET(request: Request) {
         );
 
         // 잘리거나 비정상적으로 짧은 본문은 실패 처리 (재시도 흐름으로 복구)
-        if (usage.finishReason === "length" || episodeText.trim().length < 1000) {
-          throw new Error(
-            usage.finishReason === "length"
-              ? "본문이 길이 제한으로 잘렸습니다. 다시 시도해주세요."
-              : "본문이 비정상적으로 짧게 생성됐습니다. 다시 시도해주세요."
-          );
-        }
+        const failure = episodeFailureMessage(usage, episodeText);
+        if (failure) throw new Error(failure);
 
         // 완료 → content + status 업데이트
         await serviceClient
@@ -195,11 +216,12 @@ export async function GET(request: Request) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
 
-        // 실패 → status 업데이트
+        // 실패 → status 업데이트 + 쿼터 환불
         await serviceClient
           .from("episodes")
           .update({ status: "failed" })
           .eq("id", newEpisode.id);
+        await serviceClient.rpc("refund_episode_generation", { p_user_id: user.id });
 
         sendEvent({
           stage: "first_episode",

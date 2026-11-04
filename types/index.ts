@@ -3,18 +3,38 @@ export type AIProvider = "anthropic" | "gemini" | "grok";
 export interface AIModelConfig {
   light: string;  // Free 티어: 아웃라인/캐릭터/메타용
   heavy: string;  // Free 티어: 1화 완성본용 & Pro 티어: 전체
+  /** Pro 티어 1화 전용 최상위 모델 (선택). 독자의 첫인상을 결정하는 화에만 원가를 더 쓴다 */
+  premium?: string;
+}
+
+// 모델 ID는 환경변수로 덮어쓸 수 있다 (예: AI_MODEL_GROK_LIGHT). 모델 은퇴 시 재배포 없이 교체 가능.
+// 서버 전용 값이라 클라이언트 번들에서는 undefined → 기본값으로 대체된다.
+function modelFromEnv(key: string, fallback: string): string {
+  return process.env[key] || fallback;
 }
 
 export const AI_MODELS: Record<AIProvider, AIModelConfig> = {
-  gemini: { light: "gemini-2.5-flash", heavy: "gemini-3.1-pro-preview" },
-  grok: { light: "grok-4-1-fast-non-reasoning", heavy: "grok-4.20-0309-reasoning" },
-  anthropic: { light: "claude-sonnet-4-20250514", heavy: "claude-sonnet-4-6" },
+  gemini: {
+    light: modelFromEnv("AI_MODEL_GEMINI_LIGHT", "gemini-3.8-flash"),
+    heavy: modelFromEnv("AI_MODEL_GEMINI_HEAVY", "gemini-4-argon"),
+  },
+  grok: {
+    // Grok 4.7 Fast는 공개 API에 없어 경량/상위 모두 grok-4.7 사용
+    light: modelFromEnv("AI_MODEL_GROK_LIGHT", "grok-4.7"),
+    heavy: modelFromEnv("AI_MODEL_GROK_HEAVY", "grok-4.7"),
+  },
+  anthropic: {
+    // claude-sonnet-4-20250514는 2026-06-15 은퇴 → Haiku 5.5로 교체
+    light: modelFromEnv("AI_MODEL_ANTHROPIC_LIGHT", "claude-haiku-5-5"),
+    heavy: modelFromEnv("AI_MODEL_ANTHROPIC_HEAVY", "claude-sonnet-5-5"),
+    premium: modelFromEnv("AI_MODEL_ANTHROPIC_PREMIUM", "claude-opus-5-5"),
+  },
 };
 
 export const AI_PROVIDER_OPTIONS: { value: AIProvider; label: string; freeModel: string; proModel: string }[] = [
-  { value: "gemini", label: "Gemini (Google)", freeModel: "Gemini 2.5 Flash / 3.1 Pro", proModel: "Gemini 3.1 Pro" },
-  { value: "grok", label: "Grok (xAI)", freeModel: "Grok 4.1 Fast / 4.20", proModel: "Grok 4.20" },
-  { value: "anthropic", label: "Claude (Anthropic)", freeModel: "Sonnet 4 / Sonnet 4.6", proModel: "Sonnet 4.6" },
+  { value: "gemini", label: "Gemini (Google)", freeModel: "Gemini 3.8 Flash / 4 Argon", proModel: "Gemini 4 Argon" },
+  { value: "grok", label: "Grok (xAI)", freeModel: "Grok 4.7", proModel: "Grok 4.7" },
+  { value: "anthropic", label: "Claude (Anthropic)", freeModel: "Haiku 5.5 / Sonnet 5.5", proModel: "Sonnet 5.5 (1화는 Opus 5.5)" },
 ];
 
 export type Tier = "free" | "pro" | "enterprise";
@@ -35,6 +55,8 @@ export interface Profile {
   monthly_reset_at: string;
   monthly_cover_count: number;
   cover_reset_at: string;
+  monthly_episode_count: number;
+  episode_reset_at: string;
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +78,7 @@ export interface Project {
   cover_prompts: CoverPrompt[] | null;
   seo: SeoData | null;
   variation_of: string | null;
+  retry_count: number;
   token_usage: TokenUsage | null;
   created_at: string;
   updated_at: string;
@@ -116,6 +139,7 @@ export interface Episode {
   episode_number: number;
   content: string;
   status: "completed" | "generating" | "failed";
+  retry_count: number;
   created_at: string;
 }
 
@@ -190,3 +214,22 @@ export const TIER_LIMITS: Record<Tier, number> = {
 };
 
 export const COVER_MONTHLY_LIMIT = 20;
+
+/** 프로젝트당 무료 에피소드 수 */
+export const FREE_EPISODE_LIMIT = 3;
+
+/**
+ * 월간 에피소드 생성 상한 (재생성 포함). Pro 9,900원 대비 상위 모델 원가를 고려한 값 — 운영 데이터로 조정.
+ * free는 프로젝트당 3화 제한이 실질 한도이고, 이 값은 우회 방지용 안전망.
+ */
+export const EPISODE_MONTHLY_LIMIT: Record<Tier, number> = {
+  free: 30,
+  pro: 100,
+  enterprise: 1000,
+};
+
+/** 실패한 에피소드 1개당 재생성 최대 횟수 */
+export const EPISODE_RETRY_LIMIT = 3;
+
+/** 프로젝트 누락 단계(캐릭터/1화/메타) 재시도 최대 횟수 */
+export const PROJECT_RETRY_LIMIT = 3;

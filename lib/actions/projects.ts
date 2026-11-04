@@ -60,7 +60,9 @@ export async function recoverStuckProject(
 
   const cutoff = new Date(Date.now() - STUCK_THRESHOLD_MS).toISOString();
 
-  const { data, error } = await supabase
+  // 상태 컬럼은 service role만 쓸 수 있다 (009) — 소유권은 user_id 조건으로 보장
+  const serviceClient = await createServiceClient();
+  const { data, error } = await serviceClient
     .from("projects")
     .update({ status: "failed" })
     .eq("id", id)
@@ -78,7 +80,6 @@ export async function recoverStuckProject(
   // 쿼터가 실제로 소비된 경우(생성이 시작된 경우)에만 환불 — 미소비 상태를 잘못 환불하지 않도록
   if (data[0].generation_started_at) {
     // 고착된 생성은 서버가 중단돼 환불이 실행되지 못한 케이스 — 쿼터 환불
-    const serviceClient = await createServiceClient();
     const { error: refundError } = await serviceClient.rpc("refund_generation", {
       p_user_id: user.id,
     });

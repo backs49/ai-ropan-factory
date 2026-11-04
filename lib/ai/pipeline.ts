@@ -1,4 +1,4 @@
-import { streamAI } from "./providers";
+import { streamAI, MAX_TOKENS, episodeFailureMessage } from "./providers";
 import {
   getOutlinePrompt,
   getCharacterPrompt,
@@ -70,15 +70,16 @@ export function isValidOutline(o: unknown): o is OutlineData {
   );
 }
 
-function getModelForStage(
+export function getModelForStage(
   provider: AIProvider,
   tier: Tier,
   stage: GenerationStage
 ): string {
   const models = AI_MODELS[provider];
 
-  // Pro: 모든 단계에 최신 모델
+  // Pro: 모든 단계에 상위 모델, 1화는 최상위 모델이 있으면 그 모델 (Claude: Opus 5.5)
   if (tier === "pro" || tier === "enterprise") {
+    if (stage === "first_episode" && models.premium) return models.premium;
     return models.heavy;
   }
 
@@ -122,7 +123,7 @@ export async function runGenerationPipeline(
     {
       system: outlinePrompt.system,
       user: outlinePrompt.user,
-      maxTokens: 8000,
+      maxTokens: MAX_TOKENS.json,
       model: getModelForStage(provider, tier, "outline"),
       expectsJSON: true,
     },
@@ -147,7 +148,9 @@ export async function runGenerationPipeline(
       error:
         outlineUsage.finishReason === "length"
           ? "아웃라인 응답이 길이 제한으로 잘렸습니다. 화수를 줄여 다시 시도해주세요."
-          : "아웃라인 파싱 실패",
+          : outlineUsage.finishReason === "refusal"
+            ? "AI가 안전 정책에 따라 생성을 거절했습니다. 키워드나 분위기를 바꿔 다시 시도해주세요."
+            : "아웃라인 파싱 실패",
     });
     tokenUsage.cost_estimate = estimateCost(provider, tier, tokenUsage);
     return { outline, characters, firstEpisode, seo, tokenUsage };
@@ -164,7 +167,7 @@ export async function runGenerationPipeline(
     {
       system: charPrompt.system,
       user: charPrompt.user,
-      maxTokens: 8000,
+      maxTokens: MAX_TOKENS.json,
       model: getModelForStage(provider, tier, "characters"),
       expectsJSON: true,
     },
@@ -208,7 +211,7 @@ export async function runGenerationPipeline(
     {
       system: episodePrompt.system,
       user: episodePrompt.user,
-      maxTokens: 8000,
+      maxTokens: MAX_TOKENS.episode,
       model: getModelForStage(provider, tier, "first_episode"),
     },
     (text) => {
@@ -221,15 +224,9 @@ export async function runGenerationPipeline(
 
   // 잘리거나 비정상적으로 짧은 본문은 실패로 처리 → first_episode가 null이면
   // 프로젝트 페이지의 누락 단계 재시도(RetryButton) 흐름으로 복구 가능
-  if (episodeUsage.finishReason === "length" || episodeText.trim().length < 1000) {
-    sendEvent({
-      stage: "first_episode",
-      status: "error",
-      error:
-        episodeUsage.finishReason === "length"
-          ? "1화 본문이 길이 제한으로 잘렸습니다. 재시도해주세요."
-          : "1화 본문이 비정상적으로 짧습니다. 재시도해주세요.",
-    });
+  const episodeError = episodeFailureMessage(episodeUsage, episodeText);
+  if (episodeError) {
+    sendEvent({ stage: "first_episode", status: "error", error: episodeError });
   } else {
     firstEpisode = episodeText;
     sendEvent({ stage: "first_episode", status: "completed" });
@@ -245,7 +242,7 @@ export async function runGenerationPipeline(
     {
       system: metaPrompt.system,
       user: metaPrompt.user,
-      maxTokens: 3000,
+      maxTokens: MAX_TOKENS.meta,
       model: getModelForStage(provider, tier, "meta"),
       expectsJSON: true,
     },
@@ -274,16 +271,16 @@ function estimateCost(provider: AIProvider, tier: Tier, usage: TokenUsage): numb
   // Pro uses heavy model pricing, Free uses approximate blend
   const rates: Record<AIProvider, { free: { input: number; output: number }; pro: { input: number; output: number } }> = {
     gemini: {
-      free: { input: 0.5, output: 2 },      // blended Flash + 3.1 Pro
-      pro: { input: 1.25, output: 10 },      // Gemini 3.1 Pro
+      free: { input: 1.5, output: 7 },       // blended 3.8 Flash ($0.75/$3.75) + 4 Argon
+      pro: { input: 4, output: 20 },         // Gemini 4 Argon (2026-12-01 인상 후 단가 기준)
     },
     grok: {
-      free: { input: 0.6, output: 1.9 },     // blended 4.1 Fast + 4.20
-      pro: { input: 2, output: 6 },           // Grok 4.20
+      free: { input: 2, output: 6 },         // Grok 4.7 (경량/상위 동일)
+      pro: { input: 2, output: 6 },          // Grok 4.7
     },
     anthropic: {
-      free: { input: 3, output: 15 },         // blended Sonnet 4 + 4.6
-      pro: { input: 3, output: 15 },          // Sonnet 4.6
+      free: { input: 0.7, output: 3.5 },     // blended Haiku 5.5 ($0.10/$0.50) + Sonnet 5.5
+      pro: { input: 2.5, output: 12.5 },     // Sonnet 5.5 + 1화 Opus 5.5 ($4/$20) 혼합
     },
   };
   const r = tier === "pro" || tier === "enterprise" ? rates[provider].pro : rates[provider].free;

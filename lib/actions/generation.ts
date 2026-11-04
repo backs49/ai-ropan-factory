@@ -82,7 +82,7 @@ export async function createProject(input: GenerationInput): Promise<{
       mood: input.mood,
       episode_count: episodeCount,
       variation_of: input.variation_of || null,
-      status: "generating",
+      // status는 DB 기본값('generating') — 사용자는 상태 컬럼을 쓸 수 없음 (009)
     })
     .select("id")
     .single();

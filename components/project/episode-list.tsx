@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,9 +51,17 @@ export function EpisodeList({
       );
 
       eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        let data: { content?: string; status?: string; error?: string };
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          return; // 손상된 프레임 무시
+        }
 
         if (data.content === "ALL_DONE" || data.status === "error") {
+          if (data.status === "error") {
+            toast.error(data.error || "재생성에 실패했습니다.");
+          }
           eventSource.close();
           setRetrying(null);
           router.refresh();

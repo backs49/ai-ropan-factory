@@ -1,22 +1,17 @@
 import { createServiceClient, createClient } from "@/lib/supabase/server";
-import { streamAI } from "@/lib/ai/providers";
-import { extractJSON } from "@/lib/ai/pipeline";
+import { streamAI, MAX_TOKENS, episodeFailureMessage } from "@/lib/ai/providers";
+import { sseErrorResponse } from "@/lib/sse";
+import { extractJSON, getModelForStage } from "@/lib/ai/pipeline";
 import {
   getCharacterPrompt,
   getFirstEpisodePrompt,
   getMetaPrompt,
 } from "@/lib/ai/prompts";
 import type { AIProvider, Tier, GenerationInput, OutlineData, StreamEvent } from "@/types";
-import { AI_MODELS } from "@/types";
+import { PROJECT_RETRY_LIMIT } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-function getModel(provider: AIProvider, tier: Tier, isHeavy: boolean): string {
-  const models = AI_MODELS[provider];
-  if (tier === "pro" || tier === "enterprise") return models.heavy;
-  return isHeavy ? models.heavy : models.light;
-}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -60,6 +55,24 @@ export async function GET(request: Request) {
   const tier = (profile?.tier as Tier) || "free";
   const serviceClient = await createServiceClient();
 
+  // 재시도 클레임: 동시 실행 차단 + 프로젝트당 횟수 제한 (쿼터를 쓰지 않는 경로라 상한 필수)
+  const { data: claimed, error: claimError } = await serviceClient.rpc(
+    "claim_project_retry",
+    { p_project_id: projectId, p_user_id: user.id, p_max: PROJECT_RETRY_LIMIT }
+  );
+  if (claimError) {
+    console.error(`[retry] 클레임 RPC 오류 project=${projectId}`, claimError);
+    return new Response("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", { status: 500 });
+  }
+  if (!claimed) {
+    return sseErrorResponse(
+      (project.retry_count ?? 0) >= PROJECT_RETRY_LIMIT
+        ? `재시도는 프로젝트당 ${PROJECT_RETRY_LIMIT}회까지 가능합니다.`
+        : "이미 재시도가 진행 중이거나 재시도할 수 없는 상태입니다.",
+      "outline"
+    );
+  }
+
   const input: GenerationInput = {
     genre: project.genre,
     keywords: project.keywords,
@@ -90,8 +103,8 @@ export async function GET(request: Request) {
             {
               system: charPrompt.system,
               user: charPrompt.user,
-              maxTokens: 8000,
-              model: getModel(provider, tier, false),
+              maxTokens: MAX_TOKENS.json,
+              model: getModelForStage(provider, tier, "characters"),
               expectsJSON: true,
             },
             (text) => {
@@ -129,13 +142,13 @@ export async function GET(request: Request) {
           const episodePrompt = getFirstEpisodePrompt(input, outline, charText);
           let episodeText = "";
 
-          await streamAI(
+          const episodeUsage = await streamAI(
             provider,
             {
               system: episodePrompt.system,
               user: episodePrompt.user,
-              maxTokens: 8000,
-              model: getModel(provider, tier, true),
+              maxTokens: MAX_TOKENS.episode,
+              model: getModelForStage(provider, tier, "first_episode"),
             },
             (text) => {
               episodeText += text;
@@ -143,8 +156,14 @@ export async function GET(request: Request) {
             }
           );
 
-          updates.first_episode = episodeText;
-          sendEvent({ stage: "first_episode", status: "completed" });
+          // 잘리거나 거절·비정상적으로 짧은 본문은 저장하지 않음 (다시 재시도 가능)
+          const episodeError = episodeFailureMessage(episodeUsage, episodeText);
+          if (episodeError) {
+            sendEvent({ stage: "first_episode", status: "error", error: episodeError });
+          } else {
+            updates.first_episode = episodeText;
+            sendEvent({ stage: "first_episode", status: "completed" });
+          }
         } else {
           sendEvent({ stage: "first_episode", status: "completed" });
         }
@@ -160,8 +179,8 @@ export async function GET(request: Request) {
             {
               system: metaPrompt.system,
               user: metaPrompt.user,
-              maxTokens: 3000,
-              model: getModel(provider, tier, false),
+              maxTokens: MAX_TOKENS.meta,
+              model: getModelForStage(provider, tier, "meta"),
               expectsJSON: true,
             },
             (text) => {
@@ -199,6 +218,11 @@ export async function GET(request: Request) {
         const message = error instanceof Error ? error.message : "Unknown error";
         sendEvent({ stage: "outline", status: "error", error: message });
       } finally {
+        // 진행 중 마커 해제 (횟수는 유지)
+        await serviceClient
+          .from("projects")
+          .update({ retry_started_at: null })
+          .eq("id", projectId);
         controller.close();
       }
     },

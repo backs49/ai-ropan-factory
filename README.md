@@ -19,7 +19,7 @@ Next.js 16 App Router + Supabase + 멀티 AI 프로바이더(Claude / Gemini / G
 ### 멀티 AI 프로바이더
 - 사용자가 설정에서 **Claude(Anthropic) / Gemini(Google) / Grok(xAI)** 중 선택
 - `streamAI()` 단일 인터페이스로 3사 SDK의 서로 다른 스트리밍 방식을 통합 (`lib/ai/providers.ts`)
-- **티어 기반 모델 라우팅** — Free는 아웃라인/캐릭터/메타에 경량 모델, 1화에만 상위 모델. Pro는 전 단계 상위 모델
+- **티어 기반 모델 라우팅** — Free는 아웃라인/캐릭터/메타에 경량 모델, 1화에만 상위 모델. Pro는 전 단계 상위 모델 (Claude는 Pro 1화에만 최상위 Opus 5.5)
 - 프로바이더별 JSON 응답 모드(`expectsJSON`) 지원 + 코드블록/설명 텍스트에 감싸인 JSON을 안전하게 파싱하는 `extractJSON()`
 
 ### 실시간 스트리밍 UX
@@ -35,6 +35,8 @@ Next.js 16 App Router + Supabase + 멀티 AI 프로바이더(Claude / Gemini / G
 ### 동시성·쿼터 안전장치
 - **원자적 쿼터 소비** — 한도 검사와 증가를 단일 `UPDATE`로 처리하는 `security definer` RPC(`consume_generation` / `refund_generation`)로 race condition에 의한 이중 소비 차단, 실패 시 환불 RPC
 - **생성 클레임** — `generation_started_at` 마커를 원자적으로 선점해 새로고침/동시 요청에 의한 중복 파이프라인 실행 차단
+- **컬럼 단위 쓰기 권한** — 사용자는 공개 키로 표시 이름·AI 프로바이더·에피소드 본문만 수정 가능. 등급·쿼터·생성 상태 컬럼은 service role 전용 (마이그레이션 009)
+- **재시도·연재 상한** — 에피소드 재생성은 화당 3회, 누락 단계 재시도는 프로젝트당 3회, 에피소드 생성은 월간 상한(Pro 100화)을 원자적 RPC로 관리
 - 서버 액션에서 장르/분위기/연령대 화이트리스트 검증, 화수 10–200 클램프, 키워드 개수/길이 제한
 
 ### 그 외
@@ -81,9 +83,9 @@ Supabase 저장 (projects / episodes) + 토큰 사용량·비용 추정 기록
 | 분류 | 기술 |
 |------|------|
 | 프레임워크 | Next.js 16 (App Router, Turbopack), React 19, TypeScript 5 |
-| AI — Anthropic | `@anthropic-ai/sdk` — Claude Sonnet 4 (경량) / Sonnet 4.6 (상위) |
-| AI — Google | `@google/genai` — Gemini 2.5 Flash (경량) / Gemini 3.1 Pro (상위), `gemini-2.5-flash-image` (표지) |
-| AI — xAI | `openai` SDK + `api.x.ai` baseURL — Grok 4.1 Fast (경량) / Grok 4.20 (상위) |
+| AI — Anthropic | `@anthropic-ai/sdk` — Claude Haiku 5.5 (경량) / Sonnet 5.5 (상위) / Opus 5.5 (Pro 1화 전용) |
+| AI — Google | `@google/genai` — Gemini 3.8 Flash (경량) / Gemini 4 Argon (상위), `gemini-2.5-flash-image` (표지) |
+| AI — xAI | `openai` SDK + `api.x.ai` baseURL — Grok 4.7 (경량·상위 공통) |
 | DB / 인증 / 스토리지 | Supabase (PostgreSQL + RLS, Auth, Storage) — `@supabase/ssr`, `@supabase/supabase-js` |
 | 결제 | 토스페이먼츠 빌링키 API (v2 standard, CDN 스크립트 동적 로드) |
 | UI | Tailwind CSS v4, shadcn/ui (Base UI 변형), lucide-react, sonner, next-themes |
@@ -114,7 +116,7 @@ lib/
 ├── ai/                  # providers(멀티 AI 통합) · pipeline(4단계) · prompts · cover
 ├── actions/             # 서버 액션 (프로젝트, 에피소드, 인증, 계정, 설정)
 └── supabase/            # 서버/클라이언트/미들웨어 클라이언트
-supabase/migrations/     # 001~008 (스키마, 에피소드, 결제/구독, 쿼터 RPC, 표지, 생성 클레임)
+supabase/migrations/     # 001~009 (스키마, 에피소드, 결제/구독, 쿼터 RPC, 표지, 생성 클레임, 쓰기 권한 잠금)
 types/index.ts           # 도메인 타입 + AI 모델 매핑 + 티어 한도
 ```
 
@@ -150,9 +152,11 @@ npm install
 
 AI 키는 사용할 프로바이더 것만 있어도 동작합니다 (기본 프로바이더는 Gemini).
 
+모델 ID는 선택적으로 `AI_MODEL_{GEMINI|GROK|ANTHROPIC}_{LIGHT|HEAVY}` 환경변수로 덮어쓸 수 있습니다. 모델이 은퇴했을 때 재배포 없이 교체할 수 있습니다.
+
 ### 3. 데이터베이스
 
-Supabase SQL Editor에서 `supabase/migrations/`의 SQL을 **001부터 008까지 순서대로** 실행합니다. 프로필 자동 생성 트리거, RLS 정책, 쿼터 RPC, `covers` 스토리지 버킷이 함께 세팅됩니다.
+Supabase SQL Editor에서 `supabase/migrations/`의 SQL을 **001부터 009까지 순서대로** 실행합니다. 프로필 자동 생성 트리거, RLS 정책, 쿼터 RPC, `covers` 스토리지 버킷이 함께 세팅됩니다.
 
 ### 4. 실행
 
