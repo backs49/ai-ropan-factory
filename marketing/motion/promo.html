@@ -18,9 +18,11 @@
     --glass: rgba(255, 255, 255, 0.06); --glass-line: rgba(233, 196, 126, 0.28);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg0); }
+  :root { --W: 1920px; --H: 1080px; }
+  html.portrait { --W: 1080px; --H: 1920px; }
+  html, body { width: var(--W); height: var(--H); overflow: hidden; background: var(--bg0); }
   body { font-family: "Noto Sans KR", sans-serif; color: var(--cream); }
-  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden;
+  #stage { position: relative; width: var(--W); height: var(--H); overflow: hidden;
     background:
       radial-gradient(1200px 700px at 78% 18%, rgba(236, 159, 184, 0.16), transparent 60%),
       radial-gradient(1000px 800px at 15% 85%, rgba(233, 196, 126, 0.10), transparent 60%),
@@ -106,17 +108,51 @@
   #endtitle { font-size: 54px; font-weight: 800; letter-spacing: 3px; }
   #endtitle .ai { color: var(--gold); }
   #providers { font-size: 28px; color: var(--muted); letter-spacing: 2px; }
+
+  /* ---- 세로(9:16) 레이아웃 ---- */
+  .p-only { display: none; }
+  html.portrait .p-only { display: inline; }
+  html.portrait .l-only { display: none; }
+  html.portrait #title { font-size: 124px; }
+  html.portrait #title span.ai { margin-right: 26px; }
+  html.portrait .ornament { max-width: 820px; }
+  html.portrait #tagline { font-size: 44px; text-align: center; line-height: 1.5; }
+  html.portrait .heading { font-size: 60px; text-align: center; line-height: 1.3; }
+  html.portrait #s2 { gap: 44px; }
+  html.portrait #form { width: 960px; padding: 52px 44px; gap: 38px; }
+  html.portrait .row { grid-template-columns: 130px 1fr; gap: 20px; }
+  html.portrait .label { font-size: 32px; }
+  html.portrait .chips { gap: 12px; }
+  html.portrait .chip { font-size: 31px; padding: 13px 24px; }
+  html.portrait .input { font-size: 36px; }
+  html.portrait #genbtn { font-size: 38px; padding: 22px 60px; }
+  html.portrait #s3 { gap: 60px; }
+  html.portrait #pipeline { display: grid; grid-template-columns: repeat(2, 460px); gap: 36px; }
+  html.portrait #wire { display: none; }
+  html.portrait .stage { width: 460px; height: 560px; }
+  html.portrait .stream { font-size: 25px; }
+  html.portrait #s4 { flex-direction: column; gap: 56px; }
+  html.portrait #cover { width: 440px; height: 660px; }
+  html.portrait #covertitle .t { font-size: 58px; }
+  html.portrait #series { width: 960px; gap: 20px; }
+  html.portrait .ep .name { font-size: 34px; }
+  html.portrait .ep .text { font-size: 26px; }
+  html.portrait .tag { font-size: 28px; }
+  html.portrait #nextbtn { font-size: 34px; }
+  html.portrait #slogan { font-size: 92px; text-align: center; line-height: 1.35; }
+  html.portrait #endtitle { font-size: 60px; }
+  html.portrait #providers { font-size: 30px; text-align: center; line-height: 1.7; }
 </style>
 </head>
 <body>
 <div id="stage">
-  <canvas id="particles" width="1920" height="1080"></canvas>
+  <canvas id="particles"></canvas>
 
   <!-- 1. 타이틀 -->
   <section class="scene" id="s1">
     <div class="ornament" id="orn1"></div>
     <h1 id="title" class="serif"></h1>
-    <p id="tagline">키워드 한 줄이 <b>한 편의 로맨스 판타지</b>가 됩니다</p>
+    <p id="tagline">키워드 한 줄이<br class="p-only"> <b>한 편의 로맨스 판타지</b>가 됩니다</p>
     <div class="ornament" id="orn2"></div>
   </section>
 
@@ -141,7 +177,7 @@
   <section class="scene" id="s3">
     <div style="text-align:center; display:grid; gap:14px">
       <div class="eyebrow">STEP 2 · 실시간 스트리밍 생성</div>
-      <div class="heading serif">기획부터 1화까지, 한 번에</div>
+      <div class="heading serif">기획부터 1화까지,<br class="p-only"> 한 번에</div>
     </div>
     <div id="pipeline">
       <div id="wire"><div id="wirefill"></div></div>
@@ -208,15 +244,19 @@
 
   <!-- 5. 엔딩 -->
   <section class="scene" id="s5">
-    <div id="slogan" class="serif">기획부터 연재까지, <em>버튼 하나로.</em></div>
+    <div id="slogan" class="serif">기획부터 연재까지,<br class="p-only"> <em>버튼 하나로.</em></div>
     <div class="ornament" id="orn3"></div>
     <div id="endtitle" class="serif"><span class="ai">AI</span> 로판 팩토리</div>
-    <div id="providers">Claude · Gemini · Grok 멀티 AI &nbsp;|&nbsp; 아웃라인 · 캐릭터 · 연재 · 표지</div>
+    <div id="providers">Claude · Gemini · Grok 멀티 AI<span class="l-only"> &nbsp;|&nbsp; </span><br class="p-only">아웃라인 · 캐릭터 · 연재 · 표지</div>
   </section>
 </div>
 
 <script>
   const DURATION = 21; // 초
+  const params = new URLSearchParams(location.search);
+  const PORTRAIT = params.has("portrait"); // ?portrait → 세로 1080×1920
+  if (PORTRAIT) document.documentElement.classList.add("portrait");
+  const W = PORTRAIT ? 1080 : 1920, H = PORTRAIT ? 1920 : 1080;
   const $ = (s) => document.querySelector(s);
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
   const prog = (t, a, b) => clamp((t - a) / (b - a));
@@ -237,13 +277,15 @@
   // --- 입자 (결정적 난수 → 같은 t는 항상 같은 프레임) ---
   const rand = (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
   const P = Array.from({ length: 90 }, () => ({
-    x: rand() * 1920, y: rand() * 1080, r: 0.8 + rand() * 2.6, v: 12 + rand() * 30, ph: rand() * Math.PI * 2, gold: rand() < 0.7,
+    x: rand() * W, y: rand() * H, r: 0.8 + rand() * 2.6, v: 12 + rand() * 30, ph: rand() * Math.PI * 2, gold: rand() < 0.7,
   }));
-  const ctx = $("#particles").getContext("2d");
+  const cvs = $("#particles");
+  cvs.width = W; cvs.height = H;
+  const ctx = cvs.getContext("2d");
   function drawParticles(t) {
-    ctx.clearRect(0, 0, 1920, 1080);
+    ctx.clearRect(0, 0, W, H);
     for (const p of P) {
-      const y = ((p.y - p.v * t) % 1180 + 1180) % 1180 - 50;
+      const y = ((p.y - p.v * t) % (H + 100) + (H + 100)) % (H + 100) - 50;
       const x = p.x + Math.sin(t * 0.6 + p.ph) * 18;
       const a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(t * 1.8 + p.ph));
       ctx.beginPath();
@@ -299,8 +341,8 @@
     const tx = btn.left + btn.width * 0.55, ty = btn.top + btn.height * 0.6;
     const mv = easeInOut(prog(t, 6.0, 6.8));
     const press = prog(t, 6.9, 7.05) - prog(t, 7.05, 7.2);
-    $("#cursor").style.left = `${lerp(1700, tx, mv)}px`;
-    $("#cursor").style.top = `${lerp(1040, ty, mv)}px`;
+    $("#cursor").style.left = `${lerp(W - 220, tx, mv)}px`;
+    $("#cursor").style.top = `${lerp(H - 60, ty, mv)}px`;
     $("#cursor").style.transform = `scale(${1 - press * 0.18})`;
     $("#cursor").style.opacity = prog(t, 5.8, 6.1);
     $("#genbtn").style.transform = `scale(${1 - press * 0.05})`;
@@ -325,7 +367,9 @@
     // 4. 결과 (13.8 ~ 18.2s)
     scene($("#s4"), t, 13.8, 14.4, 17.7, 18.2);
     const cv = easeOut(prog(t, 13.9, 14.9));
-    $("#cover").style.transform = `perspective(1400px) rotateY(${lerp(-28, -8, cv)}deg) translateX(${(1 - cv) * -80}px)`;
+    $("#cover").style.transform = PORTRAIT
+      ? `perspective(1400px) rotateX(${lerp(18, 4, cv)}deg) translateY(${(1 - cv) * -60}px)`
+      : `perspective(1400px) rotateY(${lerp(-28, -8, cv)}deg) translateX(${(1 - cv) * -80}px)`;
     $("#shine").style.left = `${lerp(-200, 700, prog(t, 14.6, 15.6))}px`;
     for (let i = 0; i < 3; i++) {
       const a = 14.4 + i * 0.35;
@@ -362,8 +406,8 @@
     await document.fonts.ready;
   })();
 
+  window.SIZE = { W, H };
   // 브라우저에서 직접 열면 실시간 재생 (렌더러는 ?render=1로 연다)
-  const params = new URLSearchParams(location.search);
   if (!params.has("render")) {
     window.ready.then(() => {
       if (params.has("t")) return window.render(Number(params.get("t")));

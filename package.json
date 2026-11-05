@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "video:compare": "node --env-file-if-exists=.env.local scripts/video-compare.mjs",
-    "motion:render": "node marketing/motion/render.mjs"
+    "motion:render": "node marketing/motion/render.mjs",
+    "motion:render:portrait": "node marketing/motion/render.mjs --portrait"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.81.0",

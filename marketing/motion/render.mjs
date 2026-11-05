@@ -3,7 +3,8 @@
  * promo.html을 프레임 단위로 렌더링해 mp4로 인코딩한다.
  * 필요: Playwright(Chromium), ffmpeg, 인터넷(Google Fonts)
  *
- *   node marketing/motion/render.mjs [출력경로.mp4] [--fps 30]
+ *   node marketing/motion/render.mjs [출력경로.mp4] [--fps 30] [--portrait]
+ *   --portrait: 세로 1080×1920 (쇼츠·릴스용), 기본은 가로 1920×1080
  */
 import { spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -17,12 +18,18 @@ const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const fpsIdx = args.indexOf("--fps");
 const fps = fpsIdx >= 0 ? Number(args[fpsIdx + 1]) : 30;
-const out = resolve(args.find((a, i) => !a.startsWith("--") && args[i - 1] !== "--fps") ?? join(here, "promo.mp4"));
+const portrait = args.includes("--portrait");
+const out = resolve(
+  args.find((a, i) => !a.startsWith("--") && args[i - 1] !== "--fps") ?? join(here, portrait ? "promo-portrait.mp4" : "promo.mp4")
+);
+const size = portrait ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: size, deviceScaleFactor: 1 });
 page.on("pageerror", (e) => console.error("페이지 오류:", e.message));
-await page.goto(pathToFileURL(join(here, "promo.html")).href + "?render=1", { waitUntil: "networkidle" });
+await page.goto(pathToFileURL(join(here, "promo.html")).href + "?render=1" + (portrait ? "&portrait" : ""), {
+  waitUntil: "networkidle",
+});
 await page.evaluate(() => window.ready);
 const duration = await page.evaluate(() => window.DURATION);
 const frames = Math.round(duration * fps);
